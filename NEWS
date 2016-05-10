@@ -1,0 +1,50 @@
+Changes in Version 1.1
+
+  Majors changes (no backward compatibility)! See help files for a
+  full explanation of the arguments and outputs of the functions.
+
+  o The 'bound' argument of the 'mexhaz' function has been renamed
+  'bo.max'.
+
+  o The 'pl.nlm' argument of the 'mexhaz' function has been suppressed
+  (it is still possible to print information from the nlm optimisation
+  procedure by supplying the argument 'print.level' which will be
+  directly passed to nlm).
+
+  o The output of the 'mexhaz' function has been modified to
+  facilitate the application of S3 methods. The object returned by the
+  'mexhaz' function is a list of class 'mexhaz'.
+
+  o Methods plot() and summary() for an object of class 'mexhaz' have
+  been added.
+
+  o The 'pred.mexhaz' function has been renamed 'predMexhaz' and its
+  arguments have been modified: the 't' and 'nb.time.pts' have been
+  replaced by a single argument 'time.pts' which requests the user to
+  give a vector of time points at which the predictions are to be
+  made; the 'delta' argument has been replaced by a 'conf.int'
+  argument which allows the user to select the method for confidence
+  limits calculation ("none", "delta", or "simul").
+
+  o A bug in the 'pred.mexhaz' (now, 'predMexhaz') function has been
+  fixed: in the previous version, supplying a data.frame of
+  covariables containing more than one line AND multiple time points
+  (that is, trying to predict hazard/survival for different
+  individuals at different time points) resulted in an abortion of the
+  current R session. The problem has been solved by preventing such a
+  situation to occur.
+
+  o The Delta Method is now available for models using a B-spline of
+  degree 1 for the logarithm of the baseline hazard and for models
+  using a piecewise constant hazard.
+
+  o The output of the 'predMexhaz' function has been modified to
+  facilitate the application of S3 methods. The object returned by the
+  'predMexhaz' function is a list of class 'predMexhaz'.
+        
+
+  o Methods print(), plot() and points() for an object of class
+  'predMexhaz' have been added.
+    
+  o The function 'graph.mexhaz' has been suppressed (the methods
+  plot() and points() are to be used instead).
