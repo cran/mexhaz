@@ -35,11 +35,10 @@ data(simdatn1)
 ## Fit of a mixed-effect excess hazard model, with the baseline hazard
 ## described by a Weibull distribution (without covariables)
 
-Mod_weib_mix <- mexhaz(formula=Surv(time=timesurv,
-event=vstat)~1, data=simdatn1, base="weibull",
-expected="popmrate", verbose=0, random="clust")
+Mod_weib <- mexhaz(formula=Surv(time=timesurv,
+event=vstat)~1, data=simdatn1, base="weibull", verbose=0)
 
-summary(Mod_weib_mix)
+summary(Mod_weib)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

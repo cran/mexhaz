@@ -1,3 +1,68 @@
+Changes in Version 1.2
+
+  From a general point a view, the code of almost all functions has
+  been modified in order to improve its clarity (suppression of
+  redundant calculations and unnecessary variables, etc.) without
+  modifying the obtained results. Besides, the following changes have
+  been made:
+
+  o The 'mexhaz' function now accepts counting process style input for
+  the follow-up time that allows the modelling of survival data with
+  delayed entries.
+
+  o The 'base' argument of the 'mexhaz' function now accepts a new
+  value ('exp.ns') that allows the modelling of the logarithm of the
+  baseline hazard by a restricted cubic spline.
+
+  o The 'mexhaz' function now accepts a new argument named 'numHess'
+  that allows the estimation of the Hessian by the 'hessian' function
+  of the 'numDeriv' package.
+
+  o The 'bo.max' argument of the 'mexhaz' function has been replaced
+  by a new argument named 'bound' that allows the specification of the
+  boundary knots of spline functions.
+
+  o The following objects have been added to the output of the
+  'mexhaz' function: (i) the vector of initial values of the
+  parameters ('init'), (ii) the shrinkage estimators with their
+  standard errors ('mu.hat'), (iii) the variances of the shrinkage
+  estimators ('var.mu.hat'), (iv) the covariances between each
+  shrinkage estimator, the fixed effect parameter estimates
+  ('vcov.fix.mu.hat') and (v) the name of the variable representing
+  the expected hazard (for excess hazard regression models). (ii)-(iv)
+  are only relevant when a random effect is present. (iii) and (iv)
+  are used by the 'predict.mexhaz' function to obtain cluster-specific
+  predictions with appropriate confidence intervals.
+
+  o The 'predMexhaz' has been replaced by a function named
+  'predict.mexhaz' and now accepts new arguments: (i) 'cluster' allows
+  the estimation of cluster-specific predictions (only relevant when a
+  random effect is present), (ii) 'include.gradient' allows the
+  function to return the gradient of the logarithm of the hazard and
+  the gradient of the logarithm of the cumulative hazard, (iii)
+  'level' designates the level of confidence to be used to calculate
+  confidence intervals, (iv) 'delta.type.h' and 'delta.type.s' allow
+  the user to choose the type of confidence interval to be calculated
+  for the hazard and the survival when using the Delta Method.
+  
+  o The 'predict.mexhaz' function also returns the covariance matrix
+  used for the estimation of the variances and confidence intervals of
+  the hazard and survival.
+
+  o A function 'update.mexhaz' applicable to objects of class 'mexhaz'
+  has been added. It allows the user to update a mexhaz model by
+  changing one or several arguments (not necessarily the formula) of
+  the original model.
+
+  o A method 'ranef.mexhaz' applicable to objects of class 'mexhaz' has been
+  added. It allows the extraction of the cluster-specific random
+  effects with their standard errors.
+
+  o A bug that hampered model convergence for big datasets has been
+  corrected in the 'FrailtyAdapt.c' file.
+
+
+
 Changes in Version 1.1
 
   Majors changes (no backward compatibility)! See help files for a

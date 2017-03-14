@@ -1,39 +1,24 @@
-\name{mexhaz}
-\alias{mexhaz}
+\name{update.mexhaz}
+\alias{update.mexhaz}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{mexhaz function}
+\title{Update of a mexhaz model}
 \description{
-
-Fit an (excess) hazard regression model using different shapes for the
-baseline hazard (Weibull, piecewise constant, exponential of a B-spline
-of degree 1 to 3, exponential of a restricted cubic spline), with the
-possibility to include time-dependent effects of variable(s) and a
-random effect defined at the cluster level. The function accepts
-right-censored and counting process input styles for the follow-up
-time. The latter allows the modelling of survival data with delayed
-entries. The time-dependent effect of a covariable is modelled by adding
-interaction terms between the covariable and a function of time of the
-same class as the one used for the baseline hazard (in particular, with
-the same knots for piecewise constant hazards; and with the same degree
-and the same knots for B-spline or restricted cubic spline
-functions). The random effect is assumed to be normally distributed with
-mean 0 and standard deviation sigma. The optimisation process uses
-adaptive Gaussian quadrature to calculate the cluster-specific marginal
-likelihoods. The logarithm of the full marginal likelihood, defined as
-the sum of the logarithms of the cluster-specific marginal likelihoods,
-is then maximised using an optimisation routine such as \code{nlm}
-(default) or \code{optim}.
-
+Function allowing the user to update an existing mexhaz model. All the
+arguments of the model can be updated. If the argument 'init' is not
+provided, the function uses the estimated values of the existing model
+as starting values for the corresponding parameters of the new model.
 }
 
-\usage{mexhaz(formula, data, expected = NULL, base = c("weibull",
-"exp.bs", "exp.ns", "pw.cst"), degree = 3, knots = NULL, bound = NULL,
-n.gleg = 20, init = NULL, random = NULL, n.aghq = 10,
-fnoptim = c("nlm", "optim"), verbose = 100, method = "Nelder-Mead",
+\usage{\method{update}{mexhaz}(object, formula, data, expected = NULL,
+base = c("weibull","exp.bs", "exp.ns", "pw.cst"), degree = 3, knots =
+NULL, bound = NULL, n.gleg = 20, init = NULL, random = NULL, n.aghq =
+10, fnoptim = c("nlm", "optim"), verbose = 100, method = "Nelder-Mead",
 iterlim=10000, numHess=FALSE, print.level=1,...)}
 
 %- maybe also 'usage' for other objects documented here.
 \arguments{
+  \item{object}{an object of class \code{mexhaz}, corresponding to a survival model fitted with the \code{mexhaz} function.
+}
   \item{formula}{
 a formula object, with the response on the left of the \code{~}
 operator, and the linear predictor on the right. The response must be of
@@ -52,7 +37,8 @@ day) is substituted in order to make computations possible. However, it
 should be stressed that this is just a convention and that it does not
 make much sense if the time scale is not expressed in years. We therefore
 advise the analyst to deal with 0 time values during the dataset preparation stage.
-}
+
+See \code{\link{update.formula}} for more details.}
   \item{data}{
 a \code{data.frame} containing the variables referred to in the \code{formula},
 as well as in the \code{expected} and \code{random} arguments if these arguments are used.
@@ -69,7 +55,7 @@ hazard. Selection can be made between the following options:
 \code{"weibull"} for a Weibull hazard, \code{"exp.bs"} for a hazard
 described by the exponential of a B-spline (only B-splines of degree 1,
 2 or 3 are accepted), \code{"exp.ns"} for a hazard described by the
-exponential of a restricted cubic spline (also called 'natural
+exponential of a restricted cubic B-spline (also called 'natural
 spline'), \code{"pw.cst"} for a piecewise constant hazard. By default,
 \code{base="weibull"}.  }
 
@@ -90,18 +76,17 @@ constant hazard over the whole follow-up period if
 \code{base="pw.cst"}).
 }
 \item{bound}{
-  a vector of two numerical values corresponding to the boundary knots
-  of the spline functions. If \code{base="exp.bs"} or
-  \code{base="exp.ns"}, computation of the B-spline basis requires that
-  boundary knots be given. The \code{bound} argument allows the user to
-  specify these boundary knots. If \code{base="exp.bs"}, the interval
-  defined by the boundary knots must at least include the interval
-  \code{c(0,max(time))} (otherwise, there could be problems with
-  ill-conditioned bases). If \code{base="exp.ns"}, the boundary knots
-  correspond to the knots beyond which the spline is contrained to be
-  linear (in that case, the boundary knots can be values contained in
-  \code{c(0,max(time))}). By default, the
-  boundary knots are set to \code{c(0,max(time))}.
+  If \code{base="exp.bs"} or \code{base="exp.ns"}, computation of the
+  B-spline basis requires that boundary knots be given. The \code{bound}
+  argument allows the user to specify these boundary knots. If
+  \code{base="exp.bs"}, the interval defined by the boundary knots must
+  at least include the interval \code{c(0,max(time))} (otherwise, there
+  could be problems with ill-conditioned bases). If
+  \code{base="exp.ns"}, the boundary knots correspond to the knots
+  beyond which the spline is contrained to be linear (in that case, the
+  boundary knots can be values contained in \code{c(0,max(time))}). By
+  default, the boundary knots are set to
+  \code{c(0,max(time))}.
 }
   \item{n.gleg}{
 if \code{base="exp.bs"} and degree is equal to 2 or 3, or if
@@ -121,13 +106,13 @@ default, \code{n.gleg=20}.
     if \code{base="exp.bs"}, the parameters of the B-spline are all
     set to -1;
 
-    if \code{base="exp.ns"}, the parameters of the restricted cubic spline are all
+    if \code{base="exp.ns"}, the parameters of the restricted cubic B-spline are all
     set to -1;
 
     if \code{base="pw.cst"}, the logarithm of the piecewise-constant
     hazards are set to -1;
 
-     the parameters describing the effects of the covariables are all set
+     the parameters describing the effects of the covariates are all set
      to 0;
 
     the parameter representing the standard deviation of the random
@@ -197,68 +182,7 @@ represents additional parameters directly passed to \code{nlm} or
 %%  ~~ If necessary, more details than the description above ~~
 %}
 \value{
-  An object of class \code{mexhaz} containing the following elements:
-  \item{dataset}{name of the dataset used to fit the model.}
-  \item{call}{function call on which the model is based.}
-  \item{formula}{formula part of the call.}
-  \item{expected}{name of the variable corresponding to the expected
-    hazard (takes the value \code{NA} for standard, i.e., 'non-excess' hazard models).}
-  \item{xlevels}{information concerning the levels of the categorical
-    variables used in the model (used by \code{predict.mexhaz}).}
-  \item{n.obs.tot}{total number of observations in the dataset.}
-  \item{n.obs}{number of observations used to fit the model (after
-    exclusion of missing values).}
-  \item{n.events}{number of events (after exclusion of missing values).}
-  \item{n.clust}{number of clusters.}
-  \item{n.time.0}{number of observations for which the observed
-    follow-up time was equal to 0 (only for right censored type data).}
-  \item{base}{function used to model the baseline hazard.}
-  \item{max.time}{maximal observed time in the dataset.}
-  \item{bounds}{vector of boundary values used to define the B-spline (or
-    natural spline) bases.}
-  \item{degree}{degree of the B-spline used to model the logarithm of
-    the baseline hazard.}
-  \item{knots}{vector of interior knots used to define the B-spline (or
-    natural spline) bases.}
-  \item{names.ph}{names of the covariables with a proportional effect.}
-  \item{random}{name of the variable defining cluster membership (set to
-    \code{NA} in the case of a purely fixed effects model).}
-  \item{init}{a vector containing the initial values of the parameters.}
-  \item{coefficients}{a vector containing the parameter estimates.}
-  \item{std.errors}{a vector containing the standard errors of the
-    parameter estimates.}
-  \item{vcov}{the variance-covariance matrix of the estimated parameters.}
-  \item{mu.hat}{a \code{data.frame} containing the estimated cluster-specific
-    random effects (shrinkage estimators).}
-  \item{var.mu.hat}{the covariance matrix of the
-    cluster-specific shrinkage estimators.}
-  \item{vcov.fix.mu.hat}{a \code{matrix} containing the covariances
-    between the fixed effect and the
-    cluster-specific shrinkage estimators. More specifically, the i-th line
-    of the matrix represents the covariances between the shrinkage
-    estimator of the i-th cluster and the fixed effect estimates. This
-    matrix is used by the function \code{predict.mexhaz} to make
-    cluster-specific predictions.}
-  \item{n.par}{number of estimated parameters.}
-  \item{n.gleg}{number of Gauss-Legendre quadrature points used to
-    calculate the cumulative (excess) hazard (only relevant if a
-    B-spline of degree 2 or 3 or a cubic restricted spline was used to
-    model the logarithm of the baseline hazard).}
-  \item{n.aghq}{number of adaptive Gauss-Hermite quadrature points used to
-    calculate the cluster-specific marginal likelihoods (only relevant
-    if a multi-level model is fitted).}
-  \item{fnoptim}{name of the R optimisation procedure used to maximise the likelihood.}
-  \item{method}{optimisation method used by \code{optim}.}
-  \item{code}{code (integer) indicating the status of the optimisation
-    process (this code has a different meaning for \code{nlm} and for
-    \code{optim}: see their respective help page for details).}
-  \item{loglik}{value of the log-likelihood at the end of the
-    optimisation procedure.}
-  \item{iter}{number of iterations used in the
-    optimisation process.}
-  \item{eval}{number of evaluations used in the
-    optimisation process.}
- \item{time.elapsed}{total time required to reach convergence.}
+  An object of class \code{mexhaz}. See \code{\link{mexhaz}} for more details.
 }
 \references{Charvat H, Remontet L, Bossard N, Roche L, Dejardin O,
   Rachet B, Launoy G, Belot A; CENSUR Working Survival Group. A
@@ -284,31 +208,11 @@ data(simdatn1)
 ## Fit of a mixed-effect excess hazard model, with the baseline hazard
 ## described by a Weibull distribution (without covariables)
 
-Mod_weib_mix <- mexhaz(formula=Surv(time=timesurv,
-event=vstat)~1, data=simdatn1, base="weibull",
-expected="popmrate", verbose=0, random="clust")
+Mod_weib <- mexhaz(formula=Surv(time=timesurv,
+event=vstat)~1, data=simdatn1, base="weibull", verbose=0)
 
-
-## More complex examples (not run)
-
-## Fit of a mixed-effect excess hazard model, with the baseline hazard
-## described by a cubic B-spline with two knots at 1 and 5 year and with
-## effects of age (agecr), deprivation index (depindex) and sex (IsexH)
-
-# Mod_bs3_2mix_nph <- mexhaz(formula=Surv(time=timesurv,
-# event=vstat)~agecr+depindex+IsexH+nph(agecr), data=simdatn1,
-# base="exp.bs", degree=3, knots=c(1,5), expected="popmrate",
-# random="clust", verbose=1000)
-
-## Fit of a mixed-effect excess hazard model, with the baseline hazard
-## described by a restricted cubic spline with two knots at the
-## tertiles of the distribution of follow-up times for individuals who
-## presented the event and with effects of age (agecr) and sex (IsexH)
-
-# Mod_ns3_2mix_nph <- mexhaz(formula=Surv(time=timesurv,
-# event=vstat)~agecr+nph(agecr), data=simdatn1, base="exp.ns", degree=3,
-# knots=quantile(simdatn1[simdatn1$vstat==1,]$timesurv, probs=c(1:2/3)),
-# expected="popmrate", random="clust", verbose=1000)
+## Add an effect of gender
+Mod_weib_2 <- update(Mod_weib, formula=~.+IsexH)
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

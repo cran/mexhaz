@@ -3,31 +3,37 @@
 \docType{package}
 \title{Mixed effect parametric excess hazard models}
 \description{
+
 Fit an (excess) hazard regression model using different shapes for the
-baseline hazard (Weibull, piecewise constant and exponential of a
-B-spline), with the possibility to include time-dependent and/or
-non-linear effect(s) of variable(s) and a random effect defined at the
-cluster level. The time-dependent effect of a covariate is modelled by
-adding interaction terms between the covariate and a function of time of
-the same class as the one used for the baseline hazard (in particular,
-with the same knots for piecewise constant hazards; and with the same
-degree and the same knots for B-spline functions). The random effect is
-assumed to be normally distributed with mean 0 and standard deviation
-sigma. The optimisation process uses adaptive Gaussian quadrature to
-calculate the cluster-specific marginal likelihoods. The logarithm of
-the full marginal likelihood, defined as the sum of the logarithms of
-the cluster-specific marginal likelihoods, is then maximised using
-optimisation routines such as \code{nlm} or \code{optim}. Functions to
-compute and plot the predicted (excess) hazard and (net) survival are
-provided.
+baseline hazard (Weibull, piecewise constant, exponential of a B-spline
+of degree 1 to 3, exponential of a restricted cubic spline), with the
+possibility to include time-dependent effects of variable(s) and a
+random effect defined at the cluster level. Follow-up time can be
+entered in the right-censored or counting process input style. The
+latter allows the modelling of survival data with delayed entries. The
+time-dependent effect of a covariable is modelled by adding interaction
+terms between the covariable and a function of time of the same class as
+the one used for the baseline hazard (in particular, with the same knots
+for piecewise constant hazards; and with the same degree and the same
+knots for B-spline or restricted cubic spline functions). The random
+effect is assumed to be normally distributed with mean 0 and standard
+deviation sigma. The optimisation process uses adaptive Gaussian
+quadrature to calculate the cluster-specific marginal likelihoods. The
+logarithm of the full marginal likelihood, defined as the sum of the
+logarithms of the cluster-specific marginal likelihoods, is then
+maximised using an optimisation routine such as \code{nlm} (default) or
+\code{optim}. Functions to compute and plot the predicted (excess)
+hazard and (net) survival (possibly with cluster-specific predictions in
+the case of a random effect model) are provided.
+
 }
 
 \details{
 \tabular{ll}{
 Package: \tab mexhaz\cr
 Type: \tab Package\cr
-Version: \tab 1.1\cr
-Date: \tab 2016-03-24\cr
+Version: \tab 1.2\cr
+Date: \tab 2016-12-13\cr
 License: \tab GPL (>=2)\cr
 }
 }
@@ -40,7 +46,7 @@ Hadrien Charvat, Aurelien Belot
   Rachet B, Launoy G, Belot A; CENSUR Working Survival Group. A
   multilevel excess hazard model to estimate net survival on
   hierarchical data allowing for non-linear and non-proportional effects
-  of covariates. Stat Med 2016. (doi: 10.1002/sim.6881) } \keyword{package}
+  of covariates. Stat Med 2016;35:3066-3084 (doi: 10.1002/sim.6881)} \keyword{package}
 %\seealso{
 %}
 
@@ -96,7 +102,7 @@ expected="popmrate", verbose=0, random="clust")
 
 # Mod_bs3_2 <- mexhaz(formula=Surv(time=timesurv,
 # event=vstat)~agecr+depindex+IsexH, data=simdatn1, base="exp.bs",
-# egree=3, knots=c(1,5), expected="popmrate", verbose=1000)
+# degree=3, knots=c(1,5), expected="popmrate", verbose=1000)
 
 
 ## Fit of a mixed-effect excess hazard model, with the baseline hazard

@@ -1,4 +1,4 @@
-mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"),degree=3,knots=NULL,bo.max=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,fnoptim=c("nlm","optim"),verbose=100,method="Nelder-Mead",iterlim=10000,print.level=1,...){
+mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns","pw.cst"),degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,fnoptim=c("nlm","optim"),verbose=100,method="Nelder-Mead",iterlim=10000,numHess=FALSE,print.level=1,...){
 
     time0 <- as.numeric(proc.time()[3])
     FALCenv <- environment()
@@ -20,72 +20,109 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
         name.data <- name.data[2]
     }
 
-        if (base=="exp.bs" & !degree%in%c(1:3)){
+    if (base=="exp.bs" & !degree%in%c(1:3)){
         stop("This function can only be used to estimate log-hazards described by B-splines of degree 1 to 3...")
     }
 
     Frailty.Adapt <- function(nodes, nodessquare, logweights, clust, clustd, delta, expect, betal, betaL, A, var, muhatcond){
-        obj <- .Call("FrailtyAdapt", nodes, nodessquare, logweights, clust, clustd, expect, betal, betaL, A, var, muhatcond)
-    }
-    IntBs1 <- function(x,nph,param,leint,whint,knots){
-        .Call("IntBs1",x,nph,param,leint,whint,knots)
-    }
-    IntBs23 <- function(x,nph,timecat,param,deg,n,lw,matk,totk){
-        .Call("IntBs23",x,nph,timecat,param,deg,n,lw,as.double(matk),as.double(totk))
-    }
-    IntPwCst <- function(nph,param,leint,lerem,whint){
-        .Call("IntPwCst",nph,param,leint,lerem,whint)
+        obj <- .Call(C_FrailtyAdapt, nodes, nodessquare, logweights, clust, clustd, expect, betal, betaL, A, var, muhatcond)
     }
 
-    # Functions for computing the part of the B-spline bases that depends only on the knots and can therefore be calculated only once at the beginning of the function (used in combination with the IntBs23Stat function to estimate the hazard and the cumulative hazard)
+    # Function that controls what is printed during the optimisation procedure
+    if (verbose>0){
+        verbose.ll <- function(){
+            if (!((iv <- parent.neval/verbose)-floor(iv))){
+                time1 <- as.numeric(proc.time()[3])
+                print(data.frame(Eval=parent.neval,LogLik=-parent.logLik,Time=time1-time0,row.names=""))
+                cat("Param\n")
+                print(round(parent.param,4))
+                cat("\n")
+            }
+        }
+    }
+    else {
+        verbose.ll <- function(){}
+    }
 
-    if (base=="exp.bs" & degree%in%c(2:3)){
+    # Functions for computing the part of the B-spline bases that depends only on the knots and can therefore be calculated only once at the beginning of the function (used in combination with the IntHazard function to estimate the hazard and the cumulative hazard)
 
-        # For cubic B-splines
-        Transf3 <- function(vec.knots){
+    # For B-splines (also used for Natural Cubic Splines)
+    TransfDeg <- function(vec.knots,deg){
+        if (deg==1){
+            Le <- length(vec.knots)
+            Res <- vec.knots[2:Le]-vec.knots[1:(Le-1)]
+        }
+        else {
+            Dim <- (length(vec.knots)-(2*deg-1))
+            Res <- matrix(NA,2*(deg-1),Dim)
+            if (deg==2){
+                for (i in 1:Dim){
+                    TempK <- vec.knots[i:(i+3)]
+                    Res[1,i] <- 1/((TempK[4]-TempK[2])*(TempK[3]-TempK[2]))
+                    Res[2,i] <- 1/((TempK[3]-TempK[1])*(TempK[3]-TempK[2]))
+                }
+            }
+            else if (deg==3){
+                for (i in 1:Dim){
+                    TempK <- vec.knots[i:(i+5)]
+                    Res[1,i] <- 1/((TempK[6]-TempK[3])*(TempK[5]-TempK[3])*(TempK[4]-TempK[3]))
+                    Res[2,i] <- 1/((TempK[5]-TempK[2])*(TempK[4]-TempK[2])*(TempK[4]-TempK[3]))
+                    Res[3,i] <- 1/((TempK[5]-TempK[2])*(TempK[5]-TempK[3])*(TempK[4]-TempK[3]))
+                    Res[4,i] <- 1/((TempK[4]-TempK[1])*(TempK[4]-TempK[2])*(TempK[4]-TempK[3]))
+                }
+            }
+        }
+        return(Res)
+    }
+
+    # For Natural Cubic Splines
+
+    if (base=="exp.bs"){
+        NsAdjust <- function(vec.knots,BoI,BoS){
+            NULL
+        }
+        dbase <- degree
+    }
+    else if (base=="exp.ns"){
+        NsAdjust <- function(vec.knots,BoI,BoS){
             Dim <- (length(vec.knots)-5)
-            Res <- matrix(NA,4,Dim)
-            for (i in 1:Dim){
-                TempK <- vec.knots[i:(i+5)]
-                Res[1,i] <- 1/((TempK[6]-TempK[3])*(TempK[5]-TempK[3])*(TempK[4]-TempK[3]))
-                Res[2,i] <- 1/((TempK[5]-TempK[2])*(TempK[4]-TempK[2])*(TempK[4]-TempK[3]))
-                Res[3,i] <- 1/((TempK[5]-TempK[2])*(TempK[5]-TempK[3])*(TempK[4]-TempK[3]))
-                Res[4,i] <- 1/((TempK[4]-TempK[1])*(TempK[4]-TempK[2])*(TempK[4]-TempK[3]))
-            }
-            return(Res)
+            Diag <- diag(Dim)
+            QR <- qr(t(splineDesign(vec.knots,c(BoI,BoS),4,c(2,2))[,-1,drop=FALSE]))
+            Res1 <- t(apply(Diag,1,function(x){qr.qty(QR,x)})[-c(1:2),,drop=FALSE])
+            SpI <- c(BoI,splineDesign(vec.knots,rep(BoI,2L),4,c(0,1))[2,1:2])
+            SpS <- c(BoS,splineDesign(vec.knots,rep(BoS,2L),4,c(0,1))[2,(Dim:(Dim+1))])
+            Res2 <- cbind(SpI,SpS)
+            return(list(Res1,Res2))
         }
-
-        # For quadratic B-splines
-        Transf2 <- function(vec.knots){
-            Dim <- (length(vec.knots)-3)
-            Res <- matrix(NA,2,Dim)
-            for (i in 1:Dim){
-                TempK <- vec.knots[i:(i+3)]
-                Res[1,i] <- 1/((TempK[4]-TempK[2])*(TempK[3]-TempK[2]))
-                Res[2,i] <- 1/((TempK[3]-TempK[1])*(TempK[3]-TempK[2]))
-            }
-            return(Res)
-        }
-
-        # Creating the points and weights of Gauss-Legendre quadrature (for computing the cumulative hazard when base="exp.bs" and degree in c(2:3))
-        if (n.gleg<=0 | round(n.gleg,0)!=n.gleg){
-            stop("The 'n.gleg' argument must be a strictly positive integer.")
-        }
-        gl <- gauss.quad(n=n.gleg,kind="legendre")
-        gln <- gl$nodes
-        lglw <- log(gl$weights)
+        degree <- 3
+        dbase <- 1
     }
 
+    # Creating the points and weights of Gauss-Legendre quadrature (used when base is "exp.bs" and degree in c(2:3) or when base is "exp.ns")
+    if (n.gleg<=0 | round(n.gleg,0)!=n.gleg){
+        stop("The 'n.gleg' argument must be a strictly positive integer.")
+    }
+    gl <- gauss.quad(n=n.gleg,kind="legendre")
+    gln <- gl$nodes
+    lglw <- log(gl$weights)
+
+    # Data preparation
     mf <- mf[c(1L,m)]
     mf$drop.unused.levels <- TRUE
     mf$na.action <- "na.pass"
     mf[[1L]] <- quote(stats::model.frame)
     tot.formula <- terms(formula,data=data,specials="nph")
     indNph <- attr(tot.formula,"specials")$nph
-    if (!is.null(indNph)){
-        nphterm <- attr(tot.formula,"variables")[[1+indNph]]
-        nTerm <- deparse(nphterm[[2L]],width.cutoff=500L,backtick=TRUE)
-        nTerm2 <- deparse(nphterm,width.cutoff=500L,backtick=TRUE)
+    if (length(indNph)>0){
+        nTerm <- NULL
+        nTerm2 <- NULL
+        for (i in 1:length(indNph)){
+            nphterm <- attr(tot.formula,"variables")[[1+indNph[i]]]
+            nTerm <- c(nTerm,deparse(nphterm[[2L]],width.cutoff=500L,backtick=TRUE))
+            nTerm2 <- c(nTerm2,deparse(nphterm,width.cutoff=500L,backtick=TRUE))
+        }
+        nTerm <- paste(nTerm,collapse="+")
+        nTerm2 <- paste(nTerm2,collapse="-")
         FormulaN <- as.formula(paste("~",nTerm))
     }
     else {
@@ -105,16 +142,88 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
         stop("Response must be a Surv() object...")
     }
     Survtype <- attr(Y, "type")
-    if ((ncol(Y)==2) && (Survtype!="right")){
-        stop(paste("mexhaz does not support \"", Survtype, "\" type of censoring with (0, end] survival data ",
-               sep = ""))
+    if (ncol(Y)==2){
+        if (Survtype!="right"){
+            stop(paste("mexhaz does not support \"", Survtype, "\" type of censoring with (0, time] survival data",
+                       sep = ""))
+        }
+        time.obs <- Y[,1,drop=FALSE]   # Follow-up time
+        status.obs <- Y[,2]   # Status variable
+        if (base=="pw.cst"){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                .Call(C_HazardBs0R,x,nph,timecat,fixobs,param,paramf,as.double(matk))
+            }
+        }
+        else if (base=="exp.bs" & degree==1){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                .Call(C_HazardBs1R,x,nph,timecat,fixobs,param,paramf,as.double(matk),as.double(totk))
+            }
+        }
+        else if (base=="exp.bs" & degree%in%c(2,3)){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                .Call(C_HazardBs23R,x,nph,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk))
+            }
+        }
+        else if (base=="exp.ns"){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                .Call(C_HazardNsR,x,nph,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk),as.double(intk),as.double(nsadj1),as.double(nsadj2))
+            }
+        }
     }
-    else if ((ncol(Y)!=2)){
-        stop(paste("mexhaz does not support survival data in counting process format...",
-               sep = ""))
+    else if (ncol(Y)==3){
+        if (Survtype!="counting"){
+            stop(paste("mexhaz does not support \"", Survtype, "\" type of censoring with (time, time2] survival data",
+                       sep = ""))
+        }
+        if (!is.null(random)){
+            warning("Fitting a random effect model with left truncated survival times might not be appropriate if the truncation process depends on the cluster (e.g., different dates of data collection in different geographical areas)...")
+        }
+        time.obs <- Y[,1:2]   # Entry time / Follow-up time
+        status.obs <- Y[,3]   # Status variable
+        if (base=="pw.cst"){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                .Call(C_HazardBs0C,x0,x,nph,timecat0,timecat,fixobs,param,paramf,as.double(matk))
+            }
+        }
+        else if (base=="exp.bs" & degree==1){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                .Call(C_HazardBs1C,x0,x,nph,timecat0,timecat,fixobs,param,paramf,as.double(matk),as.double(totk))
+            }
+        }
+        else if (base=="exp.bs" & degree%in%c(2,3)){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                .Call(C_HazardBs23C,x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk))
+            }
+        }
+        else if (base=="exp.ns"){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                .Call(C_HazardNsC,x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk),as.double(intk),as.double(nsadj1),as.double(nsadj2))
+            }
+        }
     }
-    time.obs <- Y[,1]   # Follow-up time
-    status.obs <- Y[,2]   # Status variable
+
+    if (base=="weibull"){
+        HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+            l.lambda.beta <- NULL
+            l.Lambda.beta <- NULL
+            Test <- (!(param[1]>0 & paramf[1]>0))
+            if (!Test){
+                log.p.LT.1 <- log(paramf[1]) + as.vector(fixobs%*%paramf[-1])
+                log.p.LT.2 <- log(param[1]) + as.vector(nph%*%param[-1])
+                l.lambda.beta <- log.p.LT.2 +x*(exp(log.p.LT.2)-1)+log.p.LT.1
+                if (is.null(x0)){
+                    l.Lambda.beta <- x*exp(log.p.LT.2)+log.p.LT.1
+                }
+                else {
+                    l.Lambda.beta <- log(exp(x*exp(log.p.LT.2))-exp(x0*exp(log.p.LT.2)))+log.p.LT.1
+                }
+                valtot <- sum(l.lambda.beta) + sum(l.Lambda.beta)
+                Test <- sum((is.nan(valtot)) | (valtot==Inf))
+            }
+            Result <- list(LogHaz=l.lambda.beta, LogCum=l.Lambda.beta, Test=Test)
+            return(Result)
+        }
+    }
 
     Test.Status <- unique(status.obs[!is.na(status.obs)])
     if (!identical(Test.Status[order(Test.Status)],c(0,1))){
@@ -131,11 +240,11 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
         if (min(lambda.pop,na.rm=TRUE)<0){
             stop("The expected hazard for some observations is negative!")
         }
-        BoolExp <- 1
+        withExp <- 1
     }
     else {
         lambda.pop <- rep(0,n.obs.tot)
-        BoolExp <- 0
+        withExp <- 0
     }
 
     # Remove observations containing missing values and perform several formatting operations on the data
@@ -145,7 +254,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
         if (length(Idx.NA.Rdm)>0){
             warning("Cluster information was missing for some observations. These observations were consequently removed...")
             random.obs <- random.obs[-Idx.NA.Rdm]
-            time.obs <- time.obs[-Idx.NA.Rdm]
+            time.obs <- time.obs[-Idx.NA.Rdm,,drop=FALSE]
             status.obs <- status.obs[-Idx.NA.Rdm]
             lambda.pop <- lambda.pop[-Idx.NA.Rdm]
             data.fix <- data.fix[-Idx.NA.Rdm,,drop=FALSE]
@@ -156,7 +265,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
         IdxRnd <- order(random.obs)
         # The dataset MUST be ordered by the levels of the clustering variable
         random.obs <- random.obs[IdxRnd]
-        time.obs <- time.obs[IdxRnd]
+        time.obs <- time.obs[IdxRnd,,drop=FALSE]
         status.obs <- status.obs[IdxRnd]
         lambda.pop <- lambda.pop[IdxRnd]
         data.fix <- data.fix[IdxRnd,,drop=FALSE]
@@ -168,22 +277,64 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
     if (length(Idx.Non.NA)<n.obs.tot){
         warning("Covariables information was missing for some observations. These observations were consequently removed...")
     }
-    time.obs <- time.obs[Idx.Non.NA]
-    n.obs <- length(time.obs)
+    time.obs <- time.obs[Idx.Non.NA,,drop=FALSE]
+    n.obs <- dim(time.obs)[1]
     if (n.obs==0){
         stop("No non-missing values for some covariables...")
     }
-    Idx.Time.Neg <- which(time.obs<0)
-    if (length(Idx.Time.Neg)>0){
-        stop("Some observations have a negative follow-up time...")
+    if (Survtype=="right"){
+        time.obs.0 <- NULL
+        Idx.Time.Neg <- which(time.obs<0)
+        if (length(Idx.Time.Neg)>0){
+            stop("Some observations have a negative follow-up time...")
+        }
+        Idx.Time.0 <- which(time.obs==0)
+        if (length(Idx.Time.0)>0){
+            warning("Some observations had a follow-up time of length 0. A value of 1/730.5 (half a day) was substituted. Please check to see if it is appropriate or deal with 0 follow-up time values before using the mexhaz function.")
+        }
+        time.obs[Idx.Time.0] <- 1/730.5
     }
-    Idx.Time.0 <- which(time.obs==0)
-    if (length(Idx.Time.0)>0){
-        warning("Some observations had a follow-up time of 0. A value of 1/730.5 (half a day) was substituted. Please check to see if it is appropriate or deal with 0 follow-up time values before using the mexhaz function.")
+    if (Survtype=="counting"){
+        time.obs.0 <- time.obs[,1]
+        time.obs <- time.obs[,2]
+        Idx.Time.Neg1 <- which(time.obs.0<0)
+        if (length(Idx.Time.Neg1)>0){
+            stop("Some observations have a negative entry time...")
+        }
+        Idx.Time.Neg2 <- which(time.obs<0)
+        if (length(Idx.Time.Neg2)>0){
+            stop("Some observations have a negative exit time...")
+        }
     }
-    time.obs[Idx.Time.0] <- 1/730.5
     max.time <- max(time.obs)
-    Bo <- ifelse(is.null(bo.max),max.time,max(max.time,bo.max))
+    TestBo <- 0
+    if (!is.null(bound) & base%in%c("exp.bs","exp.ns")){
+        if (!is.numeric(bound) | length(bound)!=2 | bound[1]==bound[2]){
+            warning("The 'bound' argument should be a vector of two non-equal numeric values. Consequently, the boundary knots were assigned the default values (0,max.time).")
+            TestBo <- 1
+        }
+        else {
+            if (bound[2]<bound[1]){
+                bound <- bound[order(bound)]
+                warning("The 'bound' argument should be a vector of two ordered numeric values. Consequently, the values given were re-ordered.")
+            }
+            if (base=="exp.bs" & (bound[1]>0 | bound[2]<max.time)){
+                warning("When used with the 'exp.bs' hazard, bound[1] should not be greater than 0 and bound[2] should not be lower than max.time. Consequently, the boundary knots were assigned the default values (0,max.time).")
+                TestBo <- 1
+            }
+        }
+    }
+    else {
+        TestBo <- 1
+    }
+    if (TestBo==1){
+        BoI <- 0
+        BoS <- max.time
+    }
+    else {
+        BoI <- bound[1]
+        BoS <- bound[2]
+    }
     status.obs <- status.obs[Idx.Non.NA]
     n.events <- sum(status.obs)
     data.fix <- data.fix[Idx.Non.NA,,drop=FALSE]
@@ -205,7 +356,17 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
 
     # Weibull hazard
     if (base=="weibull"){
-        log.time.obs <- log(time.obs)
+        time.cat.0 <- NULL
+        time.cat <- NULL
+        degree <- NA
+        vec.knots <- NULL
+        int.knots <- NULL
+        MatK <- NULL
+        NsAdj <- list(NULL,NULL)
+        time.obs <- log(time.obs)
+        if (Survtype=="counting"){
+            time.obs.0 <- log(time.obs.0)
+        }
         n.td.base <- 1
         n.ntd <- dim(fix.obs)[2]
         if (n.ntd>1){
@@ -230,133 +391,140 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
         param.init[1:2] <- 0.1
     }
 
-    # Hazard modelled by the exponential of a B-spline
-    else if (base=="exp.bs"){
-
+    # Hazard modelled by the exponential of a B-spline / restricted cubic B-spline / Piecewise constant
+    else if (base%in%c("exp.bs","exp.ns","pw.cst")){
         # Baseline hazard-related objects
         if (!is.null(knots)){
-            if (min(knots,na.rm=TRUE)<=0 | max(knots,na.rm=TRUE)>=Bo | is.na(sum(knots))){
-                stop("The 'knots' argument should be a vector of values strictly between 0 and max(bo.max,time.max) where time.max is the maximum follow-up time in the dataset")
+            if (min(knots,na.rm=TRUE)<=0 | max(knots,na.rm=TRUE)>=max.time | is.na(sum(knots))){
+                stop("The 'knots' argument should be a vector of values strictly between 0 and max.time, the maximum follow-up time observed in the dataset")
             }
             else {
                 if (sum(abs(knots-knots[order(knots)]))>0){
-                    warning("The B-spline interior knots were not given in increasing order. They were consequently re-ordered.")
+                    warning("The knots were not given in increasing order. They were consequently re-ordered.")
                     knots <- knots[order(knots)]
                 }
                 if (length(unique(knots))<length(knots)){
-                    warning("There were duplicate values in the vector of B-spline interior knots. Duplicate values were removed.")
+                    warning("There were duplicate values in the vector of knots. Duplicate values were removed.")
                     knots <- unique(knots)
                 }
             }
         }
-        cuts <- c(0,knots,Bo)
-        interv <- c(knots,Bo)-c(0,knots)
-        time.cat <- cut(time.obs,breaks=cuts)
-        time.cat <- as.numeric(time.cat)-1
-        vec.knots <- c(rep(0,degree),knots,rep(Bo,degree))
-        if (degree==3){
-            MatK <- Transf3(vec.knots)
-        }
-        else if (degree==2){
-            MatK <- Transf2(vec.knots)
-        }
-        n.td.base <- degree + length(knots)
-        names.base <- paste("BS",degree,".",1:n.td.base,sep = "")
+        cuts <- c(0,knots,max.time)
+        time.cat.lab <- cut(time.obs,breaks=cuts,include.lowest=TRUE)
+        time.cat <- as.numeric(time.cat.lab)-1
+        if (base=="pw.cst"){
+            degree <- 0
+            time.obs <- time.obs-cuts[time.cat+1]
+            if (Survtype=="counting"){
+                time.cat.0 <- as.numeric(cut(time.obs.0,breaks=cuts,include.lowest=TRUE))-1
+                time.obs.0 <- time.obs.0-cuts[time.cat.0+1]
+            }
+            else if (Survtype=="right"){
+                time.cat.0 <- NULL
+            }
+            vec.knots <- NULL
+            int.knots <- NULL
+            MatK <- c(knots,BoS)-c(BoI,knots)
+            NsAdj <- list(NULL,NULL)
+            n.td.base <- length(knots)+1
+            names.base <- levels(time.cat.lab)
 
-        # For non time-dependent effects
-        n.ntd <- dim(fix.obs)[2]
-        if (n.ntd>1){
-            which.ntd <- c(1,(n.td.base+1)+1:(n.ntd-1))
+            # For non time-dependent effects
+            fix.obs <- fix.obs[,-which(colnames(fix.obs)%in%colnames(nph.obs)),drop=FALSE]
+            names.fix <- colnames(fix.obs)
+            if (!is.null(names.fix)){
+                n.ntd <- dim(fix.obs)[2]
+            }
+            else {
+                n.ntd <- 0
+                fix.obs <- 0
+            }
+            if (n.ntd>0){
+                which.ntd <- c(n.td.base+1:n.ntd)
+            }
+            else {
+                which.ntd <- NULL
+            }
+            intercept <- NULL
+            n.inter <- 0
         }
-        else {
-            which.ntd <- 1
+        else if (base%in%c("exp.bs","exp.ns")){
+            if (Survtype=="counting"){
+                time.cat.0 <- as.numeric(cut(time.obs.0,breaks=cuts,include.lowest=TRUE))-1
+            }
+            else if (Survtype=="right"){
+                time.cat.0 <- NULL
+            }
+            vec.knots <- c(rep(BoI,degree),knots,rep(BoS,degree))
+            ltk <- length(vec.knots)
+            MatK <- TransfDeg(vec.knots,degree)
+            NsAdj <- NsAdjust(c(BoI,vec.knots,BoS),BoI,BoS)
+            n.td.base <- dbase + length(knots)
+            names.base <- paste(ifelse(base=="exp.bs","BS","NS"),degree,".",1:n.td.base,sep = "")
+
+            if (base=="exp.bs") {
+                int.knots <- cuts
+            }
+            else {
+                BOI <- NULL
+                BOS <- NULL
+                firstK <- 0
+                if (BoI>0){
+                    BOI <- BoI
+                    MatK <- cbind(0,MatK)
+                    vec.knots <- c(BoI,vec.knots)
+                    firstK <- 1
+                }
+                if (BoS<max.time){
+                    BOS <- BoS
+                    MatK <- cbind(MatK,0)
+                    vec.knots <- c(vec.knots,BoS)
+                }
+                int.knots <- c(0,BOI,knots,BOS,max.time)
+                time.cat.lab <- cut(time.obs,breaks=int.knots,include.lowest=TRUE)
+                time.cat <- as.numeric(time.cat.lab)-1
+                degree <- c(degree,ltk,firstK) # ltk and firstK are passed to the HazardInt function through the 'degree' argument which is not used with NS
+            }
+
+            # For non time-dependent effects
+            n.ntd <- dim(fix.obs)[2]
+            if (n.ntd>1){
+                which.ntd <- c(1,(n.td.base+1)+1:(n.ntd-1))
+            }
+            else {
+                which.ntd <- 1
+            }
+            intercept <- "Intercept"
+            n.inter <- 1
         }
 
         # For time-dependent effects
         n.td.nph <- length(names.nph)*n.td.base
         if (n.td.nph>0){
-            which.td <- c(1+1:n.td.base,(n.td.base+n.ntd)+1:n.td.nph)
+            which.td <- c(n.inter+1:n.td.base,(n.td.base+n.ntd)+1:n.td.nph)
         }
         else {
-            which.td <- c(1+1:n.td.base)
+            which.td <- c(n.inter+1:n.td.base)
         }
         names.nph <- unlist(sapply(names.nph,function(x){paste(x,names.base,sep="*")}))
 
-        nph.obs <- t(nph.obs) # Matrix of time-dependent effects has to be transposed for use by the IntBs'xx'Stat functions
-        param.names <- c("Intercept",names.base,names.fix,names.nph)
+        fix.obs <- t(fix.obs) # Matrix of fixed effects has to be transposed for use by the Int/Delta functions
+        nph.obs <- t(nph.obs) # Matrix of time-dependent effects has to be transposed for use by the Int/Delta functions
+        param.names <- c(intercept,names.base,names.fix,names.nph)
         n.par.fix <- n.td.base+n.ntd+n.td.nph
         param.init <- rep(0,n.par.fix)
-        param.init[1:(n.td.base+1)] <- -1
-    }
-
-    # Hazard modelled by the exponential of a piecewise constant function
-    else if (base=="pw.cst") {
-
-        # Baseline hazard-related objects
-        if (!is.null(knots)){
-            if (min(knots,na.rm=TRUE)<=0 | max(knots,na.rm=TRUE)>=Bo | is.na(sum(knots))){
-                stop("The 'knots' argument should be a vector of values strictly between 0 and max(bo.max,time.max) where time.max is the maximum follow-up time in the dataset")
-            }
-            else {
-                if (sum(abs(knots-knots[order(knots)]))>0){
-                    warning("The knots defining the intervals on which the hazard is constant were not given in increasing order. They were consequently re-ordered.")
-                    knots <- knots[order(knots)]
-                }
-                if (length(unique(knots))<length(knots)){
-                    warning("There were duplicate values in the vector of knots defining the intervals on which the hazard is constant. Duplicate values were removed.")
-                    knots <- unique(knots)
-                }
-            }
-        }
-        cuts <- c(0,knots,Bo)
-        interv <- c(knots,Bo)-c(0,knots)
-        time.cat <- cut(time.obs,breaks=cuts)
-        names.base <- levels(time.cat)
-        time.cat <- as.numeric(time.cat)-1
-        time.remain <- time.obs-cuts[time.cat+1]
-        n.td.base <- length(knots)+1
-
-        # For non time-dependent effects
-        fix.obs <- fix.obs[,-which(colnames(fix.obs)%in%colnames(nph.obs)),drop=FALSE]
-        names.fix <- colnames(fix.obs)
-        if (!is.null(names.fix)){
-            n.ntd <- dim(fix.obs)[2]
-        }
-        else {
-            n.ntd <- 0
-        }
-        if (n.ntd>0){
-            which.ntd <- c(n.td.base+1:n.ntd)
-        }
-        else {
-            which.ntd <- NULL
-        }
-
-        # For time-dependent effects
-        n.td.nph <- length(names.nph)*n.td.base
-        if (n.td.nph>0){
-            which.td <- c(1:n.td.base,(n.td.base+n.ntd)+1:n.td.nph)
-        }
-        else {
-            which.td <- c(1:n.td.base)
-        }
-        if (length(names.nph)>0){
-            names.nph <- as.vector(sapply(names.nph,function(x){paste(x,names.base,sep="*")}))
-        }
-
-        nph.obs <- t(nph.obs) # Matrix of time-dependent effects has to be transposed for use by the IntPwCstStat function
-
-        param.names <- c(names.base,names.fix,names.nph)
-        n.par.fix <- n.td.base+n.ntd+n.td.nph
-        param.init <- rep(0,n.par.fix)
-        param.init[1:n.td.base] <- -1
+        param.init[1:(n.td.base+n.inter)] <- -1
     }
 
     # Creation of objects related to the random effect
     n.clust <- 1
     n.rand <- 0
+    n.par <- n.td.base + n.ntd + n.td.nph
+    which.rdm <- NULL
     if (!is.null(random)){
         n.rand <- 1
+        n.par <- n.par + 1
+        which.rdm <- n.par
         random.obs <- random.obs[Idx.Non.NA]
         status.one <- which(status.obs==1)
         lambda.pop.delta <- lambda.pop[status.one]
@@ -387,7 +555,6 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
         log.rho.H[log.rho.H==-Inf] <- -.Machine$double.xmax
     }
 
-    n.par <- n.td.base+n.ntd+n.td.nph+n.rand
 
     # Initial values
     if (!is.null(init)){
@@ -403,179 +570,68 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
     # Creation of variables that will be modified by the Hazard and LL.Tot functions
     parent.neval <- 0
     parent.param <- init
-    parent.ptd <- rep(99,(n.td.base+n.td.nph))
-    parent.pntd <- rep(99,n.ntd)
-    if (base=="exp.bs"){
-        parent.logHaz <- Inf
-        parent.logCum <- Inf
-    }
-    parent.logHazBeta <- rep(0,n.obs)
-    parent.logCumBeta <- rep(0,n.obs)
     parent.logLik <- -.Machine$double.xmax
 
-    # Functions that compute the hazards (the computed individual-specific hazards are stored in the main function environment)
-
-    if (base=="weibull"){
-        Hazard <- function(p.td.H,p.ntd.H,env=FALCenv){
-            if (p.td.H[1]>0 & p.ntd.H[1]>0){
-                log.p.LT.1 <- log(p.ntd.H[1]) + as.vector(fix.obs%*%p.ntd.H[-1])
-                log.p.LT.2 <- log(p.td.H[1]) + as.vector(nph.obs%*%p.td.H[-1])
-                l.lambda.beta <- log.p.LT.2 +log.time.obs*(exp(log.p.LT.2)-1)+log.p.LT.1
-                l.Lambda.beta <- log.time.obs*exp(log.p.LT.2)+log.p.LT.1
-                valtot <- sum(l.lambda.beta) + sum(l.Lambda.beta)
-                Test <- sum((is.nan(valtot)) | (valtot==Inf))
-            }
-            else {
-                Test <- 1
-            }
-            if (!Test){
-                env$parent.logHazBeta <- l.lambda.beta
-                env$parent.logCumBeta <- l.Lambda.beta
-            }
-            return(Test)
-        }
-    }
-
-    else if (base=="exp.bs"){
-        Hazard <- function(p.td.H,p.ntd.H,env=FALCenv){
-            if (degree==1) {
-                temp.H <- IntBs1(time.obs,nph=nph.obs,param=p.td.H,leint=interv,whint=time.cat,knots=vec.knots)
-                l.lambda <- temp.H[1:n.obs]
-                l.Lambda <- temp.H[(n.obs)+1:n.obs]
-            }
-            else {
-                test1 <- (sum(abs(p.td.H-env$parent.ptd))>0)
-                if (test1) {
-                    env$parent.logHaz <- Inf
-                    env$parent.logCum <- Inf
-                    temp.H <- IntBs23(time.obs,nph=nph.obs,timecat=time.cat,param=p.td.H,deg=degree,gln,lglw,matk=MatK,totk=vec.knots)
-                    valtot <- temp.H[2*n.obs+1]
-                    test2 <- ((is.nan(valtot)) | (valtot==Inf))
-                    if (!test2){
-                        env$parent.logHaz <- temp.H[1:n.obs]
-                        env$parent.logCum <- temp.H[(n.obs)+1:n.obs]
-                    }
-                }
-                l.lambda <- env$parent.logHaz
-                l.Lambda <- env$parent.logCum
-            }
-            if (n.ntd!=0){
-                beta.x <- as.vector(fix.obs%*%p.ntd.H)
-            }
-            else {
-                beta.x <- 0
-            }
-            valtot <- sum(l.lambda + l.Lambda + beta.x)
-            Test <- ((is.nan(valtot)) | (valtot==Inf))
-            if (!Test){
-                env$parent.logHazBeta <- l.lambda + beta.x
-                env$parent.logCumBeta <- l.Lambda + beta.x
-            }
-            return(Test)
-        }
-    }
-
-    else if (base=="pw.cst"){
-        Hazard <- function(p.td.H,p.ntd.H,env=FALCenv){
-            temp.H <- IntPwCst(nph=nph.obs,param=p.td.H,leint=interv,lerem=time.remain,whint=time.cat)
-            l.lambda <- temp.H[1:n.obs]
-            l.Lambda <- temp.H[(n.obs)+1:n.obs]
-            if (n.ntd!=0){
-                beta.x <- as.vector(fix.obs%*%p.ntd.H)
-            }
-            else {
-                beta.x <- 0
-            }
-            valtot <- sum(l.lambda + l.Lambda + beta.x)
-            Test <- ((is.nan(valtot)) | (valtot==Inf))
-            if (!Test){
-                env$parent.logHazBeta <- l.lambda + beta.x
-                env$parent.logCumBeta <- l.Lambda + beta.x
-            }
-            return(Test)
-        }
-    }
-
-    # Function that controls what is printed during the optimisation procedure
-    if (verbose>0){
-        verbose.ll <- function(){
-            if (!((iv <- parent.neval/verbose)-floor(iv))){
-                time1 <- as.numeric(proc.time()[3])
-                print(data.frame(Eval=parent.neval,LogLik=-parent.logLik,Time=time1-time0,row.names=""))
-                cat("Param\n")
-                print(round(parent.param,4))
-                cat("\n")
-            }
-        }
-    }
-    else {
-        verbose.ll <- function(){}
-    }
-
     # Function that actually computes the log-likelihood
-
     LL.Tot <- function(p.LT,mu.hat.LT=0,env=FALCenv){
 
         p.td <- p.LT[which.td]
         p.ntd <- p.LT[which.ntd]
 
-        if (Hazard(p.td,p.ntd)){
+        temp.H <- HazardInt(x0=time.obs.0,x=time.obs,nph=nph.obs,timecat0=time.cat.0,timecat=time.cat,fixobs=fix.obs,param=p.td,paramf=p.ntd,deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]])
+        if (temp.H$Test){
             res.LT <- .Machine$double.xmax
         }
         else {
             if (!is.null(random)){
-                var.w <- max(p.LT[n.par]^2,.Machine$double.xmin)
-                logHazBeta <- env$parent.logHazBeta[status.one]
-                res.temp.LT <- Frailty.Adapt(nodes=x.H, nodessquare=x.H.2, logweights=log.rho.H, clust=n.by.clust, clustd=n.by.clust.delta, expect=lambda.pop.delta, betal=logHazBeta, betaL=parent.logCumBeta, A=parent.cst.adj, var=var.w, muhatcond=mu.hat.LT)
+                var.w <- max(p.LT[which.rdm]^2,.Machine$double.xmin)
+                temp.LT <- Frailty.Adapt(nodes=x.H, nodessquare=x.H.2, logweights=log.rho.H, clust=n.by.clust, clustd=n.by.clust.delta, expect=lambda.pop.delta, betal=temp.H$LogHaz[status.one], betaL=temp.H$LogCum, A=parent.cst.adj, var=var.w, muhatcond=mu.hat.LT)
                 if (mu.hat.LT==1)
-                    res.LT <- res.temp.LT[1:n.clust]
+                    res.LT <- temp.LT$MuHat
                 else if (mu.hat.LT==2)
-                    res.LT <- res.temp.LT[n.clust+(1:n.clust)]
+                    res.LT <- temp.LT$SigmaHat
                 else {
-                    env$parent.cst.adj <- res.temp.LT[2*n.clust+(1:n.clust)]
-                    res.LT <- res.temp.LT[3*n.clust+1]
+                    env$parent.cst.adj <- temp.LT$CstAdj
+                    res.LT <- temp.LT$LogLik
+                    res.LT[is.nan(res.LT) | abs(res.LT)==Inf] <- .Machine$double.xmax
                 }
             }
             else {
-                if (BoolExp==1){
-                    temp.l <- exp(parent.logHazBeta)+lambda.pop
+                if (withExp==1){
+                    temp.l <- exp(temp.H$LogHaz)+lambda.pop
                     if (sum(temp.l-lambda.pop)==0){
                         res.LT <- .Machine$double.xmax
                     } # Prevents a kind of catastrophic cancellation
                     else {
                         log.lambda <- log(temp.l)
                         log.lambda[log.lambda==Inf] <- .Machine$double.xmax
-                        res.LT <- -sum(-exp(parent.logCumBeta) + status.obs*log.lambda)
+                        res.LT <- sum(exp(temp.H$LogCum) - status.obs*log.lambda)
                         res.LT <- min(res.LT,.Machine$double.xmax)
                     }
                 }
                 else {
-                    log.lambda <- parent.logHazBeta
+                    log.lambda <- temp.H$LogHaz
                     log.lambda[log.lambda==Inf] <- .Machine$double.xmax
-                    res.LT <- -sum(-exp(parent.logCumBeta) + status.obs*log.lambda)
+                    res.LT <- sum(exp(temp.H$LogCum) - status.obs*log.lambda)
                     res.LT <- min(res.LT,.Machine$double.xmax)
                 }
             }
-        }
-        if (mu.hat.LT==0){
-            res.LT[is.nan(res.LT) | abs(res.LT)==Inf] <- .Machine$double.xmax
-            if (sum(p.LT-parent.param)){
-                verbose.ll()
-                env$parent.neval <- parent.neval + 1
+            if (mu.hat.LT==0){
+                if (sum(p.LT-parent.param)){
+                    verbose.ll()
+                    env$parent.neval <- parent.neval + 1
+                }
+                env$parent.param <- p.LT + 0 # Necessary...
+                env$parent.logLik <- res.LT
             }
-            env$parent.param <- p.LT+0
-            env$parent.ptd <- p.td
-            env$parent.pntd <- p.ntd
-            env$parent.logLik <- res.LT
         }
         return(res.LT)
-
     }
 
     # Launching the optimisation procedure
     if (fnoptim=="nlm"){
         time0 <- as.numeric(proc.time()[3])
-        mod.lik <- nlm(LL.Tot,init,hessian=TRUE,iterlim=iterlim,print.level=print.level,...)
+        mod.lik <- nlm(LL.Tot,init,iterlim=iterlim,hessian=TRUE,print.level=print.level,...)
         param.fin <- mod.lik$estimate
         code.fin <- mod.lik$code
         loglik <- -mod.lik$minimum
@@ -583,7 +639,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
     }
     else if (fnoptim=="optim"){
         time0 <- as.numeric(proc.time()[3])
-        mod.lik <- optim(init,LL.Tot,hessian=TRUE,method=method,...)
+        mod.lik <- optim(init,LL.Tot,method=method,hessian=TRUE,...)
         param.fin <- mod.lik$par
         code.fin <- mod.lik$convergence
         loglik <- -mod.lik$value
@@ -592,7 +648,15 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
     names(param.fin) <- param.names
 
     # Hessian matrix
-    hessian.fin <- mod.lik$hessian
+    verbose.ll <- function(){} # Suppresses iteration printing
+    cat("Computation of the Hessian\n")
+    if (numHess){
+        hessian.fin <- hessian(LL.Tot,param.fin,mu.hat.LT=0,method.args=list(r=4))
+    }
+    else {
+        hessian.fin <- mod.lik$hessian
+    }
+    vcov <- matrix(NA,n.par,n.par)
     vcov <- try(solve(hessian.fin),silent=TRUE)
     if (is.character(vcov)){
         warning("Unable to invert the Hessian matrix...")
@@ -601,12 +665,20 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
 
     # Empirical Bayes Estimates
     if (!is.null(random)) {
+        cat("Computation of the covariance matrix of the shrinkage estimators\n")
         mu.hat.fin <- LL.Tot(param.fin,mu.hat.LT=1)
-        mu.hat.df <- data.frame(Cluster=clust,Mu.Hat=mu.hat.fin)
-        param.fin[n.par] <- abs(param.fin[n.par])
+        sigma.hat.fin <- LL.Tot(param.fin,mu.hat.LT=2)
+        deriv.mu.hat.fin <- jacobian(LL.Tot,param.fin,mu.hat.LT=1,method.args=list(r=4))
+        vcov.par.mu.hat <- vcov%*%t(deriv.mu.hat.fin)
+        var.mu.hat <- diag(sigma.hat.fin^2)+(deriv.mu.hat.fin%*%vcov.par.mu.hat)
+        mu.hat.df <- data.frame(cluster=clust,mu.hat=mu.hat.fin)
+        vcov.fix.mu.hat <- vcov.par.mu.hat[-which.rdm,,drop=FALSE]
+        param.fin[which.rdm] <- abs(param.fin[which.rdm])
     }
     else {
         mu.hat.df <- 0
+        var.mu.hat <- 0
+        vcov.fix.mu.hat <- 0
     }
 
     time1 <- as.numeric(proc.time()[3])
@@ -624,16 +696,17 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
     res.FAR <- list(dataset=name.data,
          call=call,
          formula=formula,
+         expected=ifelse(!is.null(expected),expected,NA),
          xlevels=Xlevels,
          n.obs.tot=n.obs.tot,
          n.obs=n.obs,
          n.events=n.events,
          n.clust=ifelse(!is.null(random),n.clust,1),
-         n.time.0=length(Idx.Time.0),
+         n.time.0=ifelse(Survtype=="right",length(Idx.Time.0),0),
          base=base,
          max.time=max.time,
-         bounds=c(0,Bo),
-         degree=ifelse(base=="exp.bs",degree,NA),
+         boundary.knots=c(BoI,BoS),
+         degree=degree[1],
          knots=knots,
          names.ph=names.fix,
          random=ifelse(!is.null(random),random,NA),
@@ -641,6 +714,8 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","pw.cst"
          std.errors=sqrt(diag(vcov)),
          vcov=vcov,
          mu.hat=mu.hat.df,
+         var.mu.hat=var.mu.hat,
+         vcov.fix.mu.hat=t(vcov.fix.mu.hat),
          n.par=n.par,
          n.gleg=n.gleg,
          n.aghq=n.aghq,
