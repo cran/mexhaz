@@ -40,8 +40,8 @@ double NSpl(double x, double *TotKT, double *MatKT, double *NsAdj1, double *NsAd
     BasisB[i] = 0;
   }
   if ((TempD[0] = x - NsAdj2[0])<=0){
-    BasisB[0] = 1 + TempD[0]*NsAdj2[1];
-    BasisB[1] = TempD[0]*NsAdj2[2];
+    BasisB[1] = 1 + TempD[0]*NsAdj2[1];
+    BasisB[2] = TempD[0]*NsAdj2[2];
   }
   else if ((TempD[0] = x - NsAdj2[3])>0){
     BasisB[leB-2] = TempD[0]*NsAdj2[4];
@@ -62,9 +62,9 @@ double NSpl(double x, double *TotKT, double *MatKT, double *NsAdj1, double *NsAd
   }
   for (i=0; i<leN; i++){
     TempN = 0;
-    t1 = i*(leB-1);
-    for (j=1; j<leB; j++){
-      TempN += BasisB[j]*NsAdj1[j-1+t1];
+    t1 = i*(leB-2);
+    for (j=2; j<leB; j++){
+      TempN += BasisB[j]*NsAdj1[j-2+t1];
     }
     res += Param[i]*TempN;
   }
@@ -150,8 +150,8 @@ double DeltaNSpl(double x, double *TotKT, double *MatKT, double *NsAdj1, double 
     BasisB[i] = 0;
   }
   if ((TempD[0] = x - NsAdj2[0])<=0){
-    BasisB[0] = 1 + TempD[0]*NsAdj2[1];
-    BasisB[1] = TempD[0]*NsAdj2[2];
+    BasisB[1] = 1 + TempD[0]*NsAdj2[1];
+    BasisB[2] = TempD[0]*NsAdj2[2];
   }
   else if ((TempD[0] = x - NsAdj2[3])>0){
     BasisB[leB-2] = TempD[0]*NsAdj2[4];
@@ -172,9 +172,9 @@ double DeltaNSpl(double x, double *TotKT, double *MatKT, double *NsAdj1, double 
   }
   for (i=0; i<leN; i++){
     Res[i] = 0;
-    t1 = i*(leB-1);
-    for (j=1; j<leB; j++){
-      Res[i] += BasisB[j]*NsAdj1[j-1+t1];
+    t1 = i*(leB-2);
+    for (j=2; j<leB; j++){
+      Res[i] += BasisB[j]*NsAdj1[j-2+t1];
     }
     res += ParamT[i]*Res[i];
   }

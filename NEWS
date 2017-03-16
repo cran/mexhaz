@@ -1,3 +1,9 @@
+Changes in Version 1.3
+  
+  Correction of an off-by-one error in the C functions used to handle
+  hazards described by the logarithm of a restricted cubic spline that
+  may cause an R session crash.
+
 Changes in Version 1.2
 
   From a general point a view, the code of almost all functions has

@@ -3,7 +3,7 @@
 /* (log-hazard described by linear B-spline)    */
 /* Author: H. Charvat                           */
 /* Last modified: 2016/11/25                    */
-/* Part of the mexhaz 1.2 package               */
+/* Part of the mexhaz 1.3 package               */
 /************************************************/
 
 #include <R.h>

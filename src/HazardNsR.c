@@ -3,8 +3,8 @@
 /* (when the log-hazard is described            */
 /* by a restricted cubic B-spline)              */
 /* Author: H. Charvat                           */
-/* Last modified: 2017/02/03                    */
-/* Part of the mexhaz 1.2 package               */
+/* Last modified: 2017/03/16                    */
+/* Part of the mexhaz 1.3 package               */
 /************************************************/
 
 #include <R.h>
@@ -61,7 +61,7 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
   int nnph = lnph/lx;
   int nfix = lfix/lx;
   int nbase = Deg[1]-5;
-  int leB = Deg[1]-2;
+  int leB = Deg[1]-1;
   int firstK = Deg[2];
   int i, j, z, tcz, t1;
   double tempL, tempH, tempF;
@@ -74,8 +74,8 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
     double *CumVecSpl = (double *)R_alloc((lintk-1),sizeof(double));
     double tempV;
     CumVecSpl[0] = 0;
-    for (i=0; i<lintk; i++){
-      tempV = IntNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (i-firstK));
+    for (i=0; i<(lintk-1); i++){
+      tempV = IntNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (i+firstK));
       CumVecSpl[i+1] = CumVecSpl[i] + tempV;
     }
     for (z=0; z<lx; z++){
@@ -86,8 +86,8 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
       }
       tcz = TimeCat[z];
       tempL = CumVecSpl[tcz];
-      tempL += IntNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz-firstK));
-      tempH = NSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, leB, nbase, (tcz-firstK));
+      tempL += IntNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz+firstK));
+      tempH = NSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, leB, nbase, (tcz+firstK));
       tempL = log(tempL);
       Total += tempL + tempH + tempF;
       LogHaz[z] = tempH + tempF;
@@ -113,10 +113,10 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
       tcz = TimeCat[z];
       tempL = 0;
       for (i=0; i<tcz; i++){
-	tempL += IntNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (i-firstK));
+	tempL += IntNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (i+firstK));
       }
-      tempL += IntNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (tcz-firstK));
-      tempH = NSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, leB, nbase, (tcz-firstK));
+      tempL += IntNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (tcz+firstK));
+      tempH = NSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, leB, nbase, (tcz+firstK));
       tempL = log(tempL);
       Total += tempL + tempH + tempF;
       LogHaz[z] = tempH + tempF;

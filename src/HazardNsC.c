@@ -4,8 +4,8 @@
 /* by a restricted cubic B-spline)              */
 /* For counting process data (t0, t1)           */
 /* Author: H. Charvat                           */
-/* Last modified: 2017/02/03                    */
-/* Part of the mexhaz 1.2 package               */
+/* Last modified: 2017/03/16                    */
+/* Part of the mexhaz 1.3 package               */
 /************************************************/
 
 #include <R.h>
@@ -65,7 +65,7 @@ SEXP HazardNsC(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixo
   int nnph = lnph/lx;
   int nfix = lfix/lx;
   int nbase = Deg[1]-5;
-  int leB = Deg[1]-2;
+  int leB = Deg[1]-1;
   int firstK = Deg[2];
   int i, j, z, tcz0, tcz, t1;
   double tempL, tempH, tempF;
@@ -85,11 +85,11 @@ SEXP HazardNsC(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixo
       tcz = TimeCat[z];
       tempL = 0;
       for (i=tcz0; i<tcz; i++){
-	tempL += IntNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (i-firstK));
+	tempL += IntNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (i+firstK));
       }
-      tempL += IntNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz-firstK));
-      tempL -= IntNSpl(IntK[tcz0], X0[z], &TotK[tcz0], &MatK[4*tcz0], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz0-firstK));
-      tempH = NSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, leB, nbase, (tcz-firstK));
+      tempL += IntNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz+firstK));
+      tempL -= IntNSpl(IntK[tcz0], X0[z], &TotK[tcz0], &MatK[4*tcz0], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz0+firstK));
+      tempH = NSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, leB, nbase, (tcz+firstK));
       tempL = log(tempL);
       Total += tempH + tempL + tempF;
       LogHaz[z] = tempH + tempF;
@@ -116,11 +116,11 @@ SEXP HazardNsC(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixo
       tcz = TimeCat[z];
       tempL = 0;
       for (i=tcz0; i<tcz; i++){
-	tempL += IntNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (i-firstK));
+	tempL += IntNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (i+firstK));
       }
-      tempL += IntNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz-firstK));
-      tempL -= IntNSpl(IntK[tcz0], X0[z], &TotK[tcz0], &MatK[4*tcz0], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz0-firstK));
-      tempH = NSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, leB, nbase, (tcz-firstK));
+      tempL += IntNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz+firstK));
+      tempL -= IntNSpl(IntK[tcz0], X0[z], &TotK[tcz0], &MatK[4*tcz0], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz0+firstK));
+      tempH = NSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, leB, nbase, (tcz+firstK));
       tempL = log(tempL);
       Total += tempL + tempH + tempF;
       LogHaz[z] = tempH + tempF;

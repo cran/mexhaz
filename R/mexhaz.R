@@ -176,7 +176,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
                        sep = ""))
         }
         if (!is.null(random)){
-            warning("Fitting a random effect model with left truncated survival times might not be appropriate if the truncation process depends on the cluster (e.g., different dates of data collection in different geographical areas)...")
+            stop("Fitting a random effect model for left truncated data might require special consideration. This option is currently not available...")
         }
         time.obs <- Y[,1:2]   # Entry time / Follow-up time
         status.obs <- Y[,3]   # Status variable
@@ -468,12 +468,12 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
             else {
                 BOI <- NULL
                 BOS <- NULL
-                firstK <- 0
+                firstK <- 1
                 if (BoI>0){
                     BOI <- BoI
                     MatK <- cbind(0,MatK)
                     vec.knots <- c(BoI,vec.knots)
-                    firstK <- 1
+                    firstK <- 0
                 }
                 if (BoS<max.time){
                     BOS <- BoS

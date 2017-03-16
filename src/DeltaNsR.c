@@ -5,8 +5,8 @@
 /* (log-hazard described by                  */
 /* a restricted cubic B-spline)              */
 /* Author: H. Charvat                        */
-/* Last modified: 2017/02/05                 */
-/* Part of the mexhaz 1.2 package            */
+/* Last modified: 2017/03/16                 */
+/* Part of the mexhaz 1.3 package            */
 /*********************************************/
 
 #include <R.h>
@@ -72,7 +72,7 @@ SEXP DeltaNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP paramt, SEXP deg
   int nnph = lnph/lx;
   int nfix = lfix/lx;
   int nbase = Deg[1]-5;
-  int leB = Deg[1]-2;
+  int leB = Deg[1]-1;
   int firstK = Deg[2];
   int i, j, z, t2, t3, tcz;
   double tempL, InvtempL;
@@ -111,11 +111,11 @@ SEXP DeltaNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP paramt, SEXP deg
     }
 
     for (i=0; i<tcz; i++){
-      tempL += IntDNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (i-firstK), tempLvec, Res);
+      tempL += IntDNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (i+firstK), tempLvec, Res);
     }
-    tempL += IntDNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (tcz-firstK), tempLvec, Res);
+    tempL += IntDNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (tcz+firstK), tempLvec, Res);
     InvtempL = 1/tempL;
-    DeltaNSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, leB, nbase, (tcz-firstK), Res);
+    DeltaNSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, leB, nbase, (tcz+firstK), Res);
 
     for (i=0; i<nnph; i++){
       for (j=0; j<nbase; j++){

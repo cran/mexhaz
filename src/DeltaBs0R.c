@@ -5,7 +5,7 @@
 /* (piecewise constant hazard)               */
 /* Author: H. Charvat                        */
 /* Last modified: 2017/02/05                 */
-/* Part of the mexhaz 1.2 package            */
+/* Part of the mexhaz 1.3 package            */
 /*********************************************/
 
 #include <R.h>

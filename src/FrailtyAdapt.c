@@ -4,7 +4,7 @@
 /* quadrature                               */
 /* Author: H. Charvat                       */
 /* Last modified: 2016/12/27                */
-/* Part of the mexhaz 1.2 package           */
+/* Part of the mexhaz 1.3 package           */
 /********************************************/
 
 #include <R.h>

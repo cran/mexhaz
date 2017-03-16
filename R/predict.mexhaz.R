@@ -310,12 +310,12 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
             else {
                 BOI <- NULL
                 BOS <- NULL
-                firstK <- 0
+                firstK <- 1
                 if (BoI>0){
                     BOI <- BoI
                     MatK <- cbind(0,MatK)
                     vec.knots <- c(BoI,vec.knots)
-                    firstK <- 1
+                    firstK <- 0
                 }
                 if (BoS<max.time){
                     BOS <- BoS
