@@ -1,3 +1,20 @@
+Changes in Version 1.4
+  
+  Correction of a mistake in the predict.mexhaz() function that
+  resulted in providing the limits of the confidence intervals for
+  survival when delta.type.s="log" (CI for survival based on a
+  Wald-type CI for the cumulative hazard) in the wrong order.
+
+  Change in the parametrisation of the Weibull hazard (the
+  coefficients now correspond to the logarithm of the parameters of
+  the Weibull distribution, thus allowing unconstrained optimisation).
+
+  Change in the parametrisation of the coefficient related to the
+  random effect (the coefficient now corresponds to the logarithm of
+  the standard deviation of the distribution of the random effect,
+  allowing unconstrained optimisation and consistent with future
+  multidimensional implementations).
+
 Changes in Version 1.3
   
   Correction of an off-by-one error in the C functions used to handle

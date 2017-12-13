@@ -139,8 +139,8 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
     }
     else if (base=="weibull"){
         HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
-            log.p.LT.1 <- log(paramf[1]) + as.vector(fixobs%*%paramf[-1])
-            log.p.LT.2 <- log(param[1]) + as.vector(nph%*%param[-1])
+            log.p.LT.1 <- paramf[1] + as.vector(fixobs%*%paramf[-1])
+            log.p.LT.2 <- param[1] + as.vector(nph%*%param[-1])
             l.lambda.beta <- log.p.LT.2 +x*(exp(log.p.LT.2)-1)+log.p.LT.1
             l.Lambda.beta <- x*exp(log.p.LT.2)+log.p.LT.1
             Result <- list(LogHaz=l.lambda.beta, LogCum=l.Lambda.beta)
@@ -394,8 +394,8 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
         }
         if (delta.type.s=="log"){
             Var.Cum <- exp(2*temp.H$LogCum)*Var.Log.Cum
-            BSup2 <- exp(-exp(temp.H$LogCum) + qnorm(alpha)*sqrt(Var.Cum))
-            BInf2 <- exp(-exp(temp.H$LogCum) + qnorm(1-alpha)*sqrt(Var.Cum))
+            BInf2 <- exp(-exp(temp.H$LogCum) + qnorm(alpha)*sqrt(Var.Cum))
+            BSup2 <- exp(-exp(temp.H$LogCum) + qnorm(1-alpha)*sqrt(Var.Cum))
         }
         if (delta.type.s=="plain"){
             Var.Surv <- exp(2*(temp.H$LogCum-exp(temp.H$LogCum)))*Var.Log.Cum

@@ -4,8 +4,8 @@
 /* by the Delta Method                       */
 /* (Weibull hazard)                          */
 /* Author: H. Charvat                        */
-/* Last modified: 2017/03/05                 */
-/* Part of the mexhaz 1.3 package            */
+/* Last modified: 2017/12/08                 */
+/* Part of the mexhaz 1.4 package            */
 /*********************************************/
 
 #include <R.h>
@@ -63,8 +63,8 @@ SEXP DeltaWeibR(SEXP x, SEXP nph, SEXP fixobs, SEXP paramt, SEXP varcov, SEXP gr
   for (z=0; z<lx; z++){
 
     t3 = nfix*z;
-    MyGradLH[0] = 1/ParamT[0];
-    MyGradLC[0] = 1/ParamT[0];
+    MyGradLH[0] = 1;
+    MyGradLC[0] = 1;
     for (i=0; i<nfix; i++){
       MyGradLH[i+1] = FixObs[i+t3];
       MyGradLC[i+1] = FixObs[i+t3];
@@ -74,17 +74,17 @@ SEXP DeltaWeibR(SEXP x, SEXP nph, SEXP fixobs, SEXP paramt, SEXP varcov, SEXP gr
     VarLCum[z] = 0;
 
     t2 = z*nnph;
-    TempH = 0;
+    TempH = ParamT[nfix+1];
     for (i=0; i<nnph; i++){
       TempH += ParamT[nfix+2+i]*Nph[i+t2];
     }
     TempH = X[z]*exp(TempH); 
 
-    MyGradLH[nfix+1] = 1/ParamT[nfix+1] + TempH;
+    MyGradLH[nfix+1] = 1 + TempH;
     MyGradLC[nfix+1] = TempH;
     for (i=0; i<nnph; i++){
-      MyGradLH[nfix+2+i] = Nph[i+t2]*(1+TempH*ParamT[nfix+1]);
-      MyGradLC[nfix+2+i] = Nph[i+t2]*TempH*ParamT[nfix+1];
+      MyGradLH[nfix+2+i] = Nph[i+t2]*(1+TempH);
+      MyGradLC[nfix+2+i] = Nph[i+t2]*TempH;
     }
 
     for (i=0; i<npar; i++){

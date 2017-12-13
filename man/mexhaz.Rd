@@ -71,7 +71,26 @@ described by the exponential of a B-spline (only B-splines of degree 1,
 2 or 3 are accepted), \code{"exp.ns"} for a hazard described by the
 exponential of a restricted cubic spline (also called 'natural
 spline'), \code{"pw.cst"} for a piecewise constant hazard. By default,
-\code{base="weibull"}.  }
+\code{base="weibull"}.
+
+For the Weibull hazard model, the cumulative hazard is given by the
+following relationship:
+
+H(t,x,z) = lambda*exp(x'b)*t^(rho*exp(z'g))
+
+where lambda and rho are the parameters of the Weibull baseline hazard,
+x represent variables with proportional effect (with corresponding
+regression coefficients 'b') and z represent variables with
+time-dependent effects (with corresponding regression coefficients
+'g'). The \code{mexhaz()} function does not estimate directly lambda and
+rho but their logarithms (in the output of the function, these are named
+respectively 'logLambda' and 'logRho').
+
+For the spline-based hazards, it should be noted that the B-spline
+and restricted cubic spline bases created internally in the
+\code{mexhaz()} function are identical to those obtained by the use of,
+respectively, the \code{bs()} and \code{ns()} functions from the
+\code{splines} package.}
 
 \item{degree}{
   if \code{base="exp.bs"}, \code{degree} represents the
@@ -116,7 +135,7 @@ default, \code{n.gleg=20}.
     for the baseline hazard:
 
     if \code{base="weibull"}, the scale and shape parameters are set
-    to 0.1;
+    to log(0.1);
 
     if \code{base="exp.bs"}, the parameters of the B-spline are all
     set to -1;

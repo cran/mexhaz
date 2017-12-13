@@ -206,20 +206,17 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
             l.lambda.beta <- NULL
             l.Lambda.beta <- NULL
-            Test <- (!(param[1]>0 & paramf[1]>0))
-            if (!Test){
-                log.p.LT.1 <- log(paramf[1]) + as.vector(fixobs%*%paramf[-1])
-                log.p.LT.2 <- log(param[1]) + as.vector(nph%*%param[-1])
-                l.lambda.beta <- log.p.LT.2 +x*(exp(log.p.LT.2)-1)+log.p.LT.1
-                if (is.null(x0)){
-                    l.Lambda.beta <- x*exp(log.p.LT.2)+log.p.LT.1
-                }
-                else {
-                    l.Lambda.beta <- log(exp(x*exp(log.p.LT.2))-exp(x0*exp(log.p.LT.2)))+log.p.LT.1
-                }
-                valtot <- sum(l.lambda.beta) + sum(l.Lambda.beta)
-                Test <- sum((is.nan(valtot)) | (valtot==Inf))
+            log.p.LT.1 <- paramf[1] + as.vector(fixobs%*%paramf[-1])
+            log.p.LT.2 <- param[1] + as.vector(nph%*%param[-1])
+            l.lambda.beta <- log.p.LT.2 +x*(exp(log.p.LT.2)-1)+log.p.LT.1
+            if (is.null(x0)){
+                l.Lambda.beta <- x*exp(log.p.LT.2)+log.p.LT.1
             }
+            else {
+                l.Lambda.beta <- log(exp(x*exp(log.p.LT.2))-exp(x0*exp(log.p.LT.2)))+log.p.LT.1
+            }
+            valtot <- sum(l.lambda.beta) + sum(l.Lambda.beta)
+            Test <- sum((is.nan(valtot)) | (valtot==Inf))
             Result <- list(LogHaz=l.lambda.beta, LogCum=l.Lambda.beta, Test=Test)
             return(Result)
         }
@@ -385,7 +382,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         }
         fix.obs <- fix.obs[,-1,drop=FALSE]
         nph.obs <- nph.obs[,-1,drop=FALSE]
-        param.names <- c("Lambda","Rho",names.fix,names.nph)
+        param.names <- c("logLambda","logRho",names.fix,names.nph)
         n.par.fix <- n.td.base+n.ntd+n.td.nph
         param.init <- rep(0,n.par.fix)
         param.init[1:2] <- 0.1
@@ -542,7 +539,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
             n.clust <- length(clust)
         }
         parent.cst.adj <- rep(0,n.clust)
-        param.names <- c(param.names,paste(random," (sd)",sep=""))
+        param.names <- c(param.names,paste(random," [log(sd)]",sep=""))
 
         # Creation of the points and weights of Gauss-Hermite quadrature
         if (n.aghq<=0 | round(n.aghq,0)!=n.aghq){
@@ -584,7 +581,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         }
         else {
             if (!is.null(random)){
-                var.w <- max(p.LT[which.rdm]^2,.Machine$double.xmin)
+                var.w <- exp(2*p.LT[which.rdm])
                 temp.LT <- Frailty.Adapt(nodes=x.H, nodessquare=x.H.2, logweights=log.rho.H, clust=n.by.clust, clustd=n.by.clust.delta, expect=lambda.pop.delta, betal=temp.H$LogHaz[status.one], betaL=temp.H$LogCum, A=parent.cst.adj, var=var.w, muhatcond=mu.hat.LT)
                 if (mu.hat.LT==1)
                     res.LT <- temp.LT$MuHat
@@ -673,7 +670,6 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         var.mu.hat <- diag(sigma.hat.fin^2)+(deriv.mu.hat.fin%*%vcov.par.mu.hat)
         mu.hat.df <- data.frame(cluster=clust,mu.hat=mu.hat.fin)
         vcov.fix.mu.hat <- vcov.par.mu.hat[-which.rdm,,drop=FALSE]
-        param.fin[which.rdm] <- abs(param.fin[which.rdm])
     }
     else {
         mu.hat.df <- 0

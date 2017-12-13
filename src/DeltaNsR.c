@@ -6,7 +6,7 @@
 /* a restricted cubic B-spline)              */
 /* Author: H. Charvat                        */
 /* Last modified: 2017/03/16                 */
-/* Part of the mexhaz 1.3 package            */
+/* Part of the mexhaz 1.4 package            */
 /*********************************************/
 
 #include <R.h>

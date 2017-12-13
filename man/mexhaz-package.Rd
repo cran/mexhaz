@@ -32,8 +32,8 @@ the case of a random effect model) are provided.
 \tabular{ll}{
 Package: \tab mexhaz\cr
 Type: \tab Package\cr
-Version: \tab 1.2\cr
-Date: \tab 2016-12-13\cr
+Version: \tab 1.4\cr
+Date: \tab 2017-12-08\cr
 License: \tab GPL (>=2)\cr
 }
 }

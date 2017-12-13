@@ -5,7 +5,7 @@
 /* For counting process data (t0, t1)           */
 /* Author: H. Charvat                           */
 /* Last modified: 2016/11/25                    */
-/* Part of the mexhaz 1.3 package               */
+/* Part of the mexhaz 1.4 package               */
 /************************************************/
 
 #include <R.h>
