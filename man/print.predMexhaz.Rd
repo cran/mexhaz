@@ -41,7 +41,7 @@ event=vstat)~agecr+depindex+IsexH, data=simdatn1, base="exp.bs",
 degree=1, knots=c(1,5), verbose=0)
 
 ## Prediction at several time points for one vector of covariates
-Pred_Modbs1_2A <- predict.mexhaz(Mod_bs1_2, time.pts=seq(0.1,10,by=0.1),
+Pred_Modbs1_2A <- predict(Mod_bs1_2, time.pts=seq(0.1,10,by=0.1),
 data.val=data.frame(agecr=0,depindex=0.5,IsexH=1), conf.int="delta")
 
 print(Pred_Modbs1_2A)

@@ -653,9 +653,9 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
     else {
         hessian.fin <- mod.lik$hessian
     }
-    vcov <- matrix(NA,n.par,n.par)
     vcov <- try(solve(hessian.fin),silent=TRUE)
     if (is.character(vcov)){
+        vcov <- matrix(NA,n.par,n.par)
         warning("Unable to invert the Hessian matrix...")
     }
     colnames(vcov) <- rownames(vcov) <- param.names

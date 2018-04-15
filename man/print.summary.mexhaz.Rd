@@ -1,18 +1,19 @@
-\name{summary.mexhaz}
-\alias{summary.mexhaz}
+\name{print.summary.mexhaz}
+\alias{print.summary.mexhaz}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{Summary method for a mexhaz object}
+\title{Printing method for a summary.mexhaz object}
 \description{
- Produces a summary of a mexhaz object.}
+ Display the model call, the values of the estimated model parameters,
+ as well as the corresponding hazard ratios (only for proportional effects).}
 
 \usage{
-\method{summary}{mexhaz}(object, ...)}
+\method{print}{summary.mexhaz}(x, ...)}
 
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{object}{an object of class \code{mexhaz}.}
+  \item{x}{an object of class \code{summary.mexhaz}.}
   \item{\dots}{
-represents additional parameters directly passed to \code{summary}.
+represents additional parameters directly passed to \code{print}.
 }
 }
 %\details{
@@ -24,7 +25,7 @@ represents additional parameters directly passed to \code{summary}.
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
-\code{\link{mexhaz}}, \code{\link{print.mexhaz}}, \code{\link{print.summary.mexhaz}}
+\code{\link{mexhaz}}, \code{\link{print.mexhaz}}, \code{\link{summary.mexhaz}}
 }
 
 \examples{

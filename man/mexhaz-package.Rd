@@ -32,8 +32,8 @@ the case of a random effect model) are provided.
 \tabular{ll}{
 Package: \tab mexhaz\cr
 Type: \tab Package\cr
-Version: \tab 1.4\cr
-Date: \tab 2017-12-08\cr
+Version: \tab 1.5\cr
+Date: \tab 2018-04-13\cr
 License: \tab GPL (>=2)\cr
 }
 }
@@ -62,7 +62,7 @@ event=vstat)~1, data=simdatn1, base="weibull",
 expected="popmrate", verbose=0, random="clust")
 
 
-## Examples of syntax for various models (not run) 
+## Examples of syntax for various models (not run)
 
 ## Fit of a fixed-effect excess hazard model, with the baseline hazard
 ## described by a Weibull distribution and with effects of age (agecr),

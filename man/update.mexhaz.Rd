@@ -198,7 +198,7 @@ Hadrien Charvat, Aurelien Belot
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
-\code{\link{print.mexhaz}}, \code{\link{summary.mexhaz}}, \code{\link{predict.mexhaz}}
+\code{\link{mexhaz}}
 }
 
 \examples{

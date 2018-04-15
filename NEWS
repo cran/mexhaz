@@ -1,3 +1,16 @@
+Changes in Version 1.5
+  
+  Fixed a bug in the mexhaz() function that resulted in an error of
+  the function when the covariance matrix could not be estimated. Now,
+  the function runs until completion and produces a covariance matrix
+  filled with NA values in case it could not be estimated.
+
+  Added methods fixef() and vcov() for objects of class 'mexhaz'.
+
+  Update of the summary() method for objects of class 'mexhaz' and
+  addition of a print() methods for objects of class 'summary.mexhaz'.
+
+
 Changes in Version 1.4
   
   Correction of a mistake in the predict.mexhaz() function that
