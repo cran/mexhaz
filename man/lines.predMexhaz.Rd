@@ -1,12 +1,12 @@
-\name{points.predMexhaz}
-\alias{points.predMexhaz}
+\name{lines.predMexhaz}
+\alias{lines.predMexhaz}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{Points method for a predMexhaz object}
+\title{Lines method for a predMexhaz object}
 \description{Function for adding to an already existing graphical window
   the predicted (excess) hazard or (net) survival based on a \code{predMexhaz} object.}
 
 \usage{
-\method{points}{predMexhaz}(x, which=c("surv", "hazard"), conf.int=TRUE,
+\method{lines}{predMexhaz}(x, which=c("surv", "hazard"), conf.int=TRUE,
 lty.pe="solid", lty.ci="dashed", ...)}
 
 %- maybe also 'usage' for other objects documented here.
@@ -16,7 +16,7 @@ lty.pe="solid", lty.ci="dashed", ...)}
     model fitted with the \code{mexhaz} function. Predictions can be
     obtained for multiple times for one vector of covariables
     (\code{"multitime"}) or for several vectors of covariables at one
-    time point (\code{"multiobs"}). The \code{points()} function only
+    time point (\code{"multiobs"}). The \code{lines()} function only
     applies to the \code{"multitime"} type of predictions.
   }
   \item{which}{type of curve to be plotted. Selection can be made
@@ -24,12 +24,11 @@ lty.pe="solid", lty.ci="dashed", ...)}
     and \code{"hazard"} for the (excess) hazard.}
   \item{conf.int}{logical values allowing the user to decide whether to
     plot the confidence limits of the survival (or hazard).}
-  \item{lty.pe}{type of line used for drawing the hazard/survival
-    estimate (used when 'type="l"').}
-  \item{lty.ci}{type of line used for drawing the confidence limits (used when 'type="l"').}
+  \item{lty.pe}{type of line used for drawing the hazard/survival estimate.}
+  \item{lty.ci}{type of line used for drawing the confidence limits.}
   \item{...}{additional parameters that are directly passed to the
-    \code{points} function. These parameters, if not already used
-    internally by the \code{points.predMexhaz} function, will apply simultaneously to
+    \code{lines} function. These parameters, if not already used
+    internally by the \code{lines.predMexhaz} function, will apply simultaneously to
     the point estimate and confidence limit curves.}
 }
 %\details{
@@ -62,7 +61,7 @@ Pred_Modbs2_2A <- predict(Mod_bs2_2, time.pts=seq(0,10,by=0.1),
 data.val=data.frame(agecr=0,depindex=0.5,IsexH=1))
 
 plot(Pred_Modbs2_2A, which="hazard", col="red")
-points(Pred_Modbs2_2A, which="hazard", type="l", conf.int=FALSE)
+lines(Pred_Modbs2_2A, which="hazard", conf.int=FALSE)
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

@@ -176,7 +176,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
                        sep = ""))
         }
         if (!is.null(random)){
-            stop("Fitting a random effect model for left truncated data might require special consideration. This option is currently not available...")
+            warning("Care should be taken when using counting process style of input for survival data when fitting a random effect model as shared fraity models for left truncated data might require special consideration...")
         }
         time.obs <- Y[,1:2]   # Entry time / Follow-up time
         status.obs <- Y[,3]   # Status variable
@@ -220,11 +220,6 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
             Result <- list(LogHaz=l.lambda.beta, LogCum=l.Lambda.beta, Test=Test)
             return(Result)
         }
-    }
-
-    Test.Status <- unique(status.obs[!is.na(status.obs)])
-    if (!identical(Test.Status[order(Test.Status)],c(0,1))){
-        stop("The event variable should take on the values 0 or 1...")
     }
 
     data.fix <- model.frame(FormulaF,data=data,na.action=na.pass)

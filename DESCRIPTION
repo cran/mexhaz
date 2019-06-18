@@ -1,8 +1,8 @@
 Package: mexhaz
 Type: Package
 Title: Mixed Effect Excess Hazard Models
-Version: 1.5
-Date: 2018-04-13
+Version: 1.6
+Date: 2019-06-18
 Author: Hadrien Charvat, Aurelien Belot
 Maintainer: Hadrien Charvat  <chadrien@ncc.go.jp>
 Description: Fit flexible (excess) hazard regression models with the possibility of including non-proportional effects of covariables and of adding a random effect at the cluster level (corresponding to a shared frailty).
@@ -10,6 +10,6 @@ Depends: survival
 Imports: statmod, MASS, numDeriv, splines
 License: GPL (>= 2)
 NeedsCompilation: yes
-Packaged: 2018-04-15 16:48:59 UTC; Hadrien
+Packaged: 2019-06-18 09:11:05 UTC; charvath
 Repository: CRAN
-Date/Publication: 2018-04-15 17:11:02 UTC
+Date/Publication: 2019-06-18 10:10:11 UTC

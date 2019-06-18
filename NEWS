@@ -1,3 +1,21 @@
+Changes in Version 1.6
+  
+  Fixed a bug in the mexhaz() function that resulted in an error of
+  the function when the event variable was 1 for everyone.
+
+  Fixed a bug in the summary() method for objects of class 'mexhaz'.
+
+  Fixed a bug in the update() method for objects of class 'mexhaz'
+  (provided a default value for the degree of the B-spline).
+
+  Modified the mexhaz() function so that the counting process input
+  style can be used when fitting a random effect model (stop() changed
+  into a warning()).
+
+  Added the method lines() for objects of class 'predMexhaz' and
+  changed the default plotting type for the points() method.
+
+
 Changes in Version 1.5
   
   Fixed a bug in the mexhaz() function that resulted in an error of

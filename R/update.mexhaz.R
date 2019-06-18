@@ -24,7 +24,12 @@ update.mexhaz <- function (object, formula, data, expected = NULL, base = c("wei
         data <- eval(new.call$data)
         formula <- eval(new.call$formula)
         if (!("degree"%in%names(new.call))){
-            degree <- object$degree
+            if (!is.na(object$degree)){
+                degree <- object$degree
+            }
+            else {
+                degree <- 3
+            }
         }
         else degree <- eval(new.call$degree)
         if (!("knots"%in%names(new.call))){
