@@ -3,8 +3,8 @@
 /* (piecewise constant hazard)                  */
 /* For counting process data (t0, t1)           */
 /* Author: H. Charvat                           */
-/* Last modified: 2016/11/25                    */
-/* Part of the mexhaz 1.4 package               */
+/* Last modified: 2019/11/26                    */
+/* Part of the mexhaz 1.7 package               */
 /************************************************/
 
 #include <R.h>
@@ -14,7 +14,7 @@
 
 SEXP HazardBs0C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixobs, SEXP param, SEXP paramf, SEXP matk)
 {
-  SEXP loghaz, logcum, test, rlist, rlistnames;
+  SEXP loghaz, hazcum0, hazcum, test, rlist, rlistnames;
   int lx = length(x);
   int lnph = length(nph);
   int lfix = length(fixobs);
@@ -30,9 +30,10 @@ SEXP HazardBs0C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
   PROTECT(paramf = coerceVector(paramf,REALSXP));
   PROTECT(matk = coerceVector(matk,REALSXP));
   PROTECT(loghaz = allocVector(REALSXP,lx));
-  PROTECT(logcum = allocVector(REALSXP,lx));
+  PROTECT(hazcum0 = allocVector(REALSXP,1));
+  PROTECT(hazcum = allocVector(REALSXP,lx));
   PROTECT(test = allocVector(LGLSXP,1));
-  int nprotect = 12;
+  int nprotect = 13;
 
   double *X0 = REAL(x0);
   double *X = REAL(x);
@@ -44,7 +45,7 @@ SEXP HazardBs0C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
   double *ParamF = REAL(paramf);
   double *MatK = REAL(matk);
   double *LogHaz = REAL(loghaz);
-  double *LogCum = REAL(logcum);
+  double *HazCum = REAL(hazcum);
 
   int nnph = lnph/lx;
   int nfix = lfix/lx;
@@ -66,40 +67,42 @@ SEXP HazardBs0C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
     for (i=0; i<nnph; i++){
       LogHaz[z] += Param[nbase*i+tcz]*Nph[i+t2];
     }
-    LogCum[z] = exp(LogHaz[z])*X[z];
+    HazCum[z] = exp(LogHaz[z])*X[z];
 
     for (k=tcz; k>tcz0; k--){
       Temp = 0;
       for (i=0; i<nnph; i++){
 	Temp += Param[nbase*i+(k-1)]*Nph[i+t2];
       }
-      LogCum[z] += exp(Temp)*MatK[k-1];
+      HazCum[z] += exp(Temp)*MatK[k-1];
     }
 
     Temp = 0;
     for (i=0; i<nnph; i++){
       Temp += Param[nbase*i+tcz0]*Nph[i+t2];
     }
-    LogCum[z] -= exp(Temp)*X0[z];
+    HazCum[z] -= exp(Temp)*X0[z];
 
-    LogCum[z] = log(LogCum[z]);
-    Total += LogHaz[z] + LogCum[z] + tempF;
+    Total += LogHaz[z] + log(HazCum[z]) + tempF;
     LogHaz[z] += tempF;
-    LogCum[z] += tempF;
+    HazCum[z] *= exp(tempF);
   }
+  REAL(hazcum0)[0] = 0;
   LOGICAL(test)[0] = (isinf(fabs(Total)) || isnan(Total));
 
   /* assemble the return objects as a list */
-  PROTECT(rlist= allocVector(VECSXP, 3));
+  PROTECT(rlist= allocVector(VECSXP, 4));
   SET_VECTOR_ELT(rlist, 0, loghaz);
-  SET_VECTOR_ELT(rlist, 1, logcum);
-  SET_VECTOR_ELT(rlist, 2, test);
+  SET_VECTOR_ELT(rlist, 1, hazcum0);
+  SET_VECTOR_ELT(rlist, 2, hazcum);
+  SET_VECTOR_ELT(rlist, 3, test);
 
   /* add names to the list elements */
-  PROTECT(rlistnames = allocVector(STRSXP, 3));
+  PROTECT(rlistnames = allocVector(STRSXP, 4));
   SET_STRING_ELT(rlistnames, 0, mkChar("LogHaz"));
-  SET_STRING_ELT(rlistnames, 1, mkChar("LogCum"));
-  SET_STRING_ELT(rlistnames, 2, mkChar("Test"));
+  SET_STRING_ELT(rlistnames, 1, mkChar("HazCum0"));
+  SET_STRING_ELT(rlistnames, 2, mkChar("HazCum"));
+  SET_STRING_ELT(rlistnames, 3, mkChar("Test"));
   setAttrib(rlist, R_NamesSymbol, rlistnames);
 
   UNPROTECT(nprotect+2);

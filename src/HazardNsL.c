@@ -1,5 +1,6 @@
 /************************************************/
 /* Routine for estimating the cumulative hazard */
+/* in the presence of left truncation           */
 /* (when the log-hazard is described            */
 /* by a restricted cubic B-spline)              */
 /* Author: H. Charvat                           */
@@ -13,7 +14,7 @@
 #include <Rinternals.h>
 #include "SplineFunc.h"
 
-SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP paramf, SEXP deg, SEXP n, SEXP lw, SEXP matk, SEXP totk, SEXP intk, SEXP nsadj1, SEXP nsadj2)
+SEXP HazardNsL(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixobs, SEXP param, SEXP paramf, SEXP deg, SEXP n, SEXP lw, SEXP matk, SEXP totk, SEXP intk, SEXP nsadj1, SEXP nsadj2)
 {
   SEXP loghaz, hazcum0, hazcum, test, rlist, rlistnames;
   int lx = length(x);
@@ -22,8 +23,10 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
   int lintk = length(intk);
   int lfix = length(fixobs);
 
+  PROTECT(x0 = coerceVector(x0,REALSXP));
   PROTECT(x = coerceVector(x,REALSXP));
   PROTECT(nph = coerceVector(nph,REALSXP));
+  PROTECT(timecat0 = coerceVector(timecat0,INTSXP));
   PROTECT(timecat = coerceVector(timecat,INTSXP));
   PROTECT(fixobs = coerceVector(fixobs,REALSXP));
   PROTECT(param = coerceVector(param,REALSXP));
@@ -37,13 +40,15 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
   PROTECT(nsadj1 = coerceVector(nsadj1,REALSXP));
   PROTECT(nsadj2 = coerceVector(nsadj2,REALSXP));
   PROTECT(loghaz = allocVector(REALSXP,lx));
-  PROTECT(hazcum0 = allocVector(REALSXP,1));
+  PROTECT(hazcum0 = allocVector(REALSXP,lx));
   PROTECT(hazcum = allocVector(REALSXP,lx));
   PROTECT(test = allocVector(LGLSXP,1));
-  int nprotect = 18;
+  int nprotect = 20;
 
+  double *X0 = REAL(x0);
   double *X = REAL(x);
   double *Nph = REAL(nph);
+  int *TimeCat0 = INTEGER(timecat0);
   int *TimeCat = INTEGER(timecat);
   double *FixObs = REAL(fixobs);
   double *Param = REAL(param);
@@ -57,6 +62,7 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
   double *NsAdj1 = REAL(nsadj1);
   double *NsAdj2 = REAL(nsadj2);
   double *LogHaz = REAL(loghaz);
+  double *HazCum0 = REAL(hazcum0);
   double *HazCum = REAL(hazcum);
 
   int nnph = lnph/lx;
@@ -64,8 +70,8 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
   int nbase = Deg[1]-5;
   int leB = Deg[1]-1;
   int firstK = Deg[2];
-  int i, j, z, tcz, t1;
-  double tempL, tempH, tempF;
+  int i, j, z, tcz0, tcz, t1;
+  double tempL0, tempL, tempH, tempF;
   double Total = 0;
   double TempD[6];
 
@@ -85,12 +91,16 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
       for (i=0; i<nfix; i++){
 	tempF += FixObs[i+t1]*ParamF[i];
       }
+      tcz0 = TimeCat0[z];
       tcz = TimeCat[z];
+      tempL0 = CumVecSpl[tcz0];
       tempL = CumVecSpl[tcz];
+      tempL0 += IntNSpl(IntK[tcz0], X0[z], &TotK[tcz0], &MatK[4*tcz0], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz0+firstK));
       tempL += IntNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, N, lW, lleg, leB, nbase, (tcz+firstK));
       tempH = NSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, Param, leB, nbase, (tcz+firstK));
       Total += tempL + tempH + tempF;
       LogHaz[z] = tempH + tempF;
+      HazCum0[z] = tempL0*exp(tempF);
       HazCum[z] = tempL*exp(tempF);
     }
   }
@@ -110,19 +120,25 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
 	  MyParam[i] += Param[j*nbase+i]*Nph[j+t2];
 	}
       }
+      tcz0 = TimeCat0[z];
       tcz = TimeCat[z];
+      tempL0 = 0;
       tempL = 0;
+      for (i=0; i<tcz0; i++){
+	tempL0 += IntNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (i+firstK));
+      }
       for (i=0; i<tcz; i++){
 	tempL += IntNSpl(IntK[i], IntK[i+1], &TotK[i], &MatK[4*i], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (i+firstK));
       }
+      tempL0 += IntNSpl(IntK[tcz0], X0[z], &TotK[tcz0], &MatK[4*tcz0], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (tcz0+firstK));
       tempL += IntNSpl(IntK[tcz], X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, N, lW, lleg, leB, nbase, (tcz+firstK));
       tempH = NSpl(X[z], &TotK[tcz], &MatK[4*tcz], NsAdj1, NsAdj2, MyBasisB, TempD, MyParam, leB, nbase, (tcz+firstK));
       Total += tempL + tempH + tempF;
       LogHaz[z] = tempH + tempF;
+      HazCum0[z] = tempL0*exp(tempF);
       HazCum[z] = tempL*exp(tempF);
     }
   }
-  REAL(hazcum0)[0] = 0;
   LOGICAL(test)[0] = (isinf(fabs(Total)) || isnan(Total));
 
   /* assemble the return objects as a list */

@@ -29,7 +29,7 @@ is then maximised using an optimisation routine such as \code{nlm}
 \usage{mexhaz(formula, data, expected = NULL, base = c("weibull",
 "exp.bs", "exp.ns", "pw.cst"), degree = 3, knots = NULL, bound = NULL,
 n.gleg = 20, init = NULL, random = NULL, n.aghq = 10,
-fnoptim = c("nlm", "optim"), verbose = 100, method = "Nelder-Mead",
+fnoptim = c("nlm", "optim"), verbose = 0, method = "Nelder-Mead",
 iterlim=10000, numHess=FALSE, print.level=1,...)}
 
 %- maybe also 'usage' for other objects documented here.
@@ -175,7 +175,7 @@ time the optimisation procedure updates the value of any of the
 parameters to be estimated. If \code{verbose=n} (with \code{n} an integer),
 the function will display the current values of the parameters, the
 log-likelihood and the time elapsed every \code{n} evaluations. If
-\code{verbose=0}, nothing is displayed.
+\code{verbose=0} (default), nothing is displayed.
 }
   \item{method}{
 if \code{fnoptim="optim"}, \code{method} represents the optimisation

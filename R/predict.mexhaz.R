@@ -142,8 +142,8 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
             log.p.LT.1 <- paramf[1] + as.vector(fixobs%*%paramf[-1])
             log.p.LT.2 <- param[1] + as.vector(nph%*%param[-1])
             l.lambda.beta <- log.p.LT.2 +x*(exp(log.p.LT.2)-1)+log.p.LT.1
-            l.Lambda.beta <- x*exp(log.p.LT.2)+log.p.LT.1
-            Result <- list(LogHaz=l.lambda.beta, LogCum=l.Lambda.beta)
+            Lambda.beta <- exp(log.p.LT.1)*x^exp(log.p.LT.2)
+            Result <- list(LogHaz=l.lambda.beta, HazCum=Lambda.beta)
             return(Result)
         }
         DeltaFct <- function(x0,x,nph,timecat0,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
@@ -363,7 +363,7 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
     nb.par <- length(c(which.ntd,which.td))
     temp.H <- HazardInt(x0=time.new.0,x=time.new,nph=nph.new,timecat0=time.cat.0,timecat=time.cat,fixobs=fix.new,param=coef[which.td],paramf=coef[which.ntd],deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]])
     lambda <- exp(temp.H$LogHaz)
-    Surv <- exp(-exp(temp.H$LogCum))
+    Surv <- exp(-temp.H$HazCum)
 
     # Variance and CI estimation
     if (conf.int=="delta"){
@@ -389,18 +389,18 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
             BSup1 <- exp(temp.H$LogHaz) + qnorm(1-alpha)*sqrt(Var.Haz)
         }
         if (delta.type.s=="log-log"){
-            BSup2 <- exp(-exp(temp.H$LogCum + qnorm(alpha)*sqrt(Var.Log.Cum)))
-            BInf2 <- exp(-exp(temp.H$LogCum + qnorm(1-alpha)*sqrt(Var.Log.Cum)))
+            BSup2 <- exp(-exp(log(temp.H$HazCum) + qnorm(alpha)*sqrt(Var.Log.Cum)))
+            BInf2 <- exp(-exp(log(temp.H$HazCum) + qnorm(1-alpha)*sqrt(Var.Log.Cum)))
         }
         if (delta.type.s=="log"){
-            Var.Cum <- exp(2*temp.H$LogCum)*Var.Log.Cum
-            BInf2 <- exp(-exp(temp.H$LogCum) + qnorm(alpha)*sqrt(Var.Cum))
-            BSup2 <- exp(-exp(temp.H$LogCum) + qnorm(1-alpha)*sqrt(Var.Cum))
+            Var.Cum <- exp(2*log(temp.H$HazCum))*Var.Log.Cum
+            BInf2 <- exp(-temp.H$HazCum + qnorm(alpha)*sqrt(Var.Cum))
+            BSup2 <- exp(-temp.H$HazCum + qnorm(1-alpha)*sqrt(Var.Cum))
         }
         if (delta.type.s=="plain"){
-            Var.Surv <- exp(2*(temp.H$LogCum-exp(temp.H$LogCum)))*Var.Log.Cum
-            BInf2 <- exp(-exp(temp.H$LogCum)) + qnorm(alpha)*sqrt(Var.Surv)
-            BSup2 <- exp(-exp(temp.H$LogCum)) + qnorm(1-alpha)*sqrt(Var.Surv)
+            Var.Surv <- exp(2*(log(temp.H$HazCum)-temp.H$HazCum))*Var.Log.Cum
+            BInf2 <- exp(-temp.H$HazCum) + qnorm(alpha)*sqrt(Var.Surv)
+            BSup2 <- exp(-temp.H$HazCum) + qnorm(1-alpha)*sqrt(Var.Surv)
         }
     }
     else if (conf.int=="simul"){
@@ -413,7 +413,7 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
             p.ntd <- Coef[i,which.ntd]
             temp.H <- HazardInt(x0=time.new.0,x=time.new,nph=nph.new,timecat0=time.cat.0,timecat=time.cat,fixobs=fix.new,param=p.td,paramf=p.ntd,deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]])
             Res1[,i] <- exp(temp.H$LogHaz)
-            Res2[,i] <- exp(-exp(temp.H$LogCum))
+            Res2[,i] <- exp(-temp.H$HazCum)
         }
         Var.Log.Haz <- apply(Res1,1,FUN=var)
         Var.Log.Cum <- apply(Res2,1,FUN=var)

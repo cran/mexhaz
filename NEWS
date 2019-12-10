@@ -1,3 +1,13 @@
+Changes in Version 1.7
+  
+  Implemented the correct version of the shared frailty model for left
+  truncated data.
+
+  Default value of argument 'verbose' set to 0.
+
+  Initial values for the parameters of the Weibull hazard set to log(0.1).
+
+
 Changes in Version 1.6
   
   Fixed a bug in the mexhaz() function that resulted in an error of

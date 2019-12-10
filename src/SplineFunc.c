@@ -1,7 +1,6 @@
 #include <R.h>
 #include <Rmath.h>
 #include <math.h>
-#include <math.h>
 #include <stdio.h>
 #include "SplineFunc.h"
 

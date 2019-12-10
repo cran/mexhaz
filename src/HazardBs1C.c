@@ -3,8 +3,8 @@
 /* (log-hazard described by linear B-spline)    */
 /* For counting process data (t0, t1)           */
 /* Author: H. Charvat                           */
-/* Last modified: 2016/11/25                    */
-/* Part of the mexhaz 1.4 package               */
+/* Last modified: 2019/11/26                    */
+/* Part of the mexhaz 1.7 package               */
 /************************************************/
 
 #include <R.h>
@@ -14,7 +14,7 @@
 
 SEXP HazardBs1C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixobs, SEXP param, SEXP paramf, SEXP matk, SEXP totk)
 {
-  SEXP loghaz, logcum, test, rlist, rlistnames;
+  SEXP loghaz, hazcum0, hazcum, test, rlist, rlistnames;
   int lx = length(x);
   int lnph = length(nph);
   int ltotk = length(totk);
@@ -31,9 +31,10 @@ SEXP HazardBs1C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
   PROTECT(matk = coerceVector(matk,REALSXP));
   PROTECT(totk = coerceVector(totk,REALSXP));
   PROTECT(loghaz = allocVector(REALSXP,lx));
-  PROTECT(logcum = allocVector(REALSXP,lx));
+  PROTECT(hazcum0 = allocVector(REALSXP,1));
+  PROTECT(hazcum = allocVector(REALSXP,lx));
   PROTECT(test = allocVector(LGLSXP,1));
-  int nprotect = 13;
+  int nprotect = 14;
 
   double *X0 = REAL(x0);
   double *X = REAL(x);
@@ -46,7 +47,7 @@ SEXP HazardBs1C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
   double *MatK = REAL(matk);
   double *TotK = REAL(totk);
   double *LogHaz = REAL(loghaz);
-  double *LogCum = REAL(logcum);
+  double *HazCum = REAL(hazcum);
 
   int nnph = lnph/lx;
   int nfix = lfix/lx;
@@ -82,11 +83,11 @@ SEXP HazardBs1C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
       Temp = Beta2-Beta1;
       if (Temp!=0){
 	LogHaz[z] = (1/MatK[tcz])*(Beta1*(TotK[tcz+1]-X[z])+Beta2*(X[z]-TotK[tcz]));
-	LogCum[z] = (MatK[tcz]/Temp)*(exp(LogHaz[z])-exp(Beta1));
+	HazCum[z] = (MatK[tcz]/Temp)*(exp(LogHaz[z])-exp(Beta1));
       }
       else {
 	LogHaz[z] = Beta1;
-	LogCum[z] = (X[z]-TotK[tcz])*exp(Beta1);
+	HazCum[z] = (X[z]-TotK[tcz])*exp(Beta1);
       }
 
       for (k=tcz; k>tcz0; k--){
@@ -94,10 +95,10 @@ SEXP HazardBs1C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
 	Beta2 = MyParam[k];
 	Temp = Beta2-Beta1;
 	if (Temp!=0) {
-	  LogCum[z] += (MatK[k-1]/Temp)*(exp(Beta2)-exp(Beta1));
+	  HazCum[z] += (MatK[k-1]/Temp)*(exp(Beta2)-exp(Beta1));
 	}
 	else {
-	  LogCum[z] += MatK[k-1]*exp(Beta1);
+	  HazCum[z] += MatK[k-1]*exp(Beta1);
 	}
       }
 
@@ -106,15 +107,14 @@ SEXP HazardBs1C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
       Temp = Beta2-Beta1;
       if (Temp!=0){
 	TempV = (1/MatK[tcz0])*(Beta1*(TotK[tcz0+1]-X0[z])+Beta2*(X0[z]-TotK[tcz0]));
-	LogCum[z] -= (MatK[tcz0]/Temp)*(exp(TempV)-exp(Beta1));
+	HazCum[z] -= (MatK[tcz0]/Temp)*(exp(TempV)-exp(Beta1));
       }
       else {
-	LogCum[z] -= (X0[z]-TotK[tcz0])*exp(Beta1);
+	HazCum[z] -= (X0[z]-TotK[tcz0])*exp(Beta1);
       }
-      LogCum[z] = log(LogCum[z]);
-      Total += LogCum[z] + LogHaz[z] + tempF;
+      Total += log(HazCum[z]) + LogHaz[z] + tempF;
       LogHaz[z] += tempF;
-      LogCum[z] += tempF;
+      HazCum[z] *= exp(tempF);
     }
 
   }
@@ -145,11 +145,11 @@ SEXP HazardBs1C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
       Temp = Beta2-Beta1;
       if (Temp!=0){
 	LogHaz[z] = (1/MatK[tcz])*(Beta1*(TotK[tcz+1]-X[z])+Beta2*(X[z]-TotK[tcz]));
-	LogCum[z] = (MatK[tcz]/Temp)*(exp(LogHaz[z])-exp(Beta1));
+	HazCum[z] = (MatK[tcz]/Temp)*(exp(LogHaz[z])-exp(Beta1));
       }
       else {
 	LogHaz[z] = Beta1;
-	LogCum[z] = (X[z]-TotK[tcz])*exp(Beta1);
+	HazCum[z] = (X[z]-TotK[tcz])*exp(Beta1);
       }
 
       for (k=tcz; k>tcz0; k--){
@@ -157,10 +157,10 @@ SEXP HazardBs1C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
 	Beta2 = MyParam[k];
 	Temp = Beta2-Beta1;
 	if (Temp!=0) {
-	  LogCum[z] += (MatK[k-1]/Temp)*(exp(Beta2)-exp(Beta1));
+	  HazCum[z] += (MatK[k-1]/Temp)*(exp(Beta2)-exp(Beta1));
 	}
 	else {
-	  LogCum[z] += MatK[k-1]*exp(Beta1);
+	  HazCum[z] += MatK[k-1]*exp(Beta1);
 	}
       }
 
@@ -169,31 +169,33 @@ SEXP HazardBs1C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fix
       Temp = Beta2-Beta1;
       if (Temp!=0){
 	TempV = (1/MatK[tcz0])*(Beta1*(TotK[tcz0+1]-X0[z])+Beta2*(X0[z]-TotK[tcz0]));
-	LogCum[z] -= (MatK[tcz0]/Temp)*(exp(TempV)-exp(Beta1));
+	HazCum[z] -= (MatK[tcz0]/Temp)*(exp(TempV)-exp(Beta1));
       }
       else {
-	LogCum[z] -= (X0[z]-TotK[tcz0])*exp(Beta1);
+	HazCum[z] -= (X0[z]-TotK[tcz0])*exp(Beta1);
       }
-      LogCum[z] = log(LogCum[z]);
-      Total += LogCum[z] + LogHaz[z] + tempF;
+      Total += log(HazCum[z]) + LogHaz[z] + tempF;
       LogHaz[z] += tempF;
-      LogCum[z] += tempF;
+      HazCum[z] *= exp(tempF);
     }
 
   }
+  REAL(hazcum0)[0] = 0;
   LOGICAL(test)[0] = (isinf(fabs(Total)) || isnan(Total));
 
   /* assemble the return objects as a list */
-  PROTECT(rlist= allocVector(VECSXP, 3));
+  PROTECT(rlist= allocVector(VECSXP, 4));
   SET_VECTOR_ELT(rlist, 0, loghaz);
-  SET_VECTOR_ELT(rlist, 1, logcum);
-  SET_VECTOR_ELT(rlist, 2, test);
+  SET_VECTOR_ELT(rlist, 1, hazcum0);
+  SET_VECTOR_ELT(rlist, 2, hazcum);
+  SET_VECTOR_ELT(rlist, 3, test);
 
   /* add names to the list elements */
-  PROTECT(rlistnames = allocVector(STRSXP, 3));
+  PROTECT(rlistnames = allocVector(STRSXP, 4));
   SET_STRING_ELT(rlistnames, 0, mkChar("LogHaz"));
-  SET_STRING_ELT(rlistnames, 1, mkChar("LogCum"));
-  SET_STRING_ELT(rlistnames, 2, mkChar("Test"));
+  SET_STRING_ELT(rlistnames, 1, mkChar("HazCum0"));
+  SET_STRING_ELT(rlistnames, 2, mkChar("HazCum"));
+  SET_STRING_ELT(rlistnames, 3, mkChar("Test"));
   setAttrib(rlist, R_NamesSymbol, rlistnames);
 
   UNPROTECT(nprotect+2);

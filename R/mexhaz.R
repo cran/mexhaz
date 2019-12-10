@@ -1,4 +1,4 @@
-mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns","pw.cst"),degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,fnoptim=c("nlm","optim"),verbose=100,method="Nelder-Mead",iterlim=10000,numHess=FALSE,print.level=1,...){
+mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns","pw.cst"),degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,fnoptim=c("nlm","optim"),verbose=0,method="Nelder-Mead",iterlim=10000,numHess=FALSE,print.level=1,...){
 
     time0 <- as.numeric(proc.time()[3])
     FALCenv <- environment()
@@ -24,9 +24,6 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         stop("This function can only be used to estimate log-hazards described by B-splines of degree 1 to 3...")
     }
 
-    Frailty.Adapt <- function(nodes, nodessquare, logweights, clust, clustd, delta, expect, betal, betaL, A, var, muhatcond){
-        obj <- .Call(C_FrailtyAdapt, nodes, nodessquare, logweights, clust, clustd, expect, betal, betaL, A, var, muhatcond)
-    }
 
     # Function that controls what is printed during the optimisation procedure
     if (verbose>0){
@@ -175,50 +172,101 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
             stop(paste("mexhaz does not support \"", Survtype, "\" type of censoring with (time, time2] survival data",
                        sep = ""))
         }
-        if (!is.null(random)){
-            warning("Care should be taken when using counting process style of input for survival data when fitting a random effect model as shared fraity models for left truncated data might require special consideration...")
-        }
         time.obs <- Y[,1:2]   # Entry time / Follow-up time
         status.obs <- Y[,3]   # Status variable
-        if (base=="pw.cst"){
-            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
-                .Call(C_HazardBs0C,x0,x,nph,timecat0,timecat,fixobs,param,paramf,as.double(matk))
+        if (is.null(random)){
+            if (base=="pw.cst"){
+                HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                    .Call(C_HazardBs0C,x0,x,nph,timecat0,timecat,fixobs,param,paramf,as.double(matk))
+                }
+            }
+            else if (base=="exp.bs" & degree==1){
+                HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                    .Call(C_HazardBs1C,x0,x,nph,timecat0,timecat,fixobs,param,paramf,as.double(matk),as.double(totk))
+                }
+            }
+            else if (base=="exp.bs" & degree%in%c(2,3)){
+                HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                    .Call(C_HazardBs23C,x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk))
+                }
+            }
+            else if (base=="exp.ns"){
+                HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                    .Call(C_HazardNsC,x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk),as.double(intk),as.double(nsadj1),as.double(nsadj2))
+                }
             }
         }
-        else if (base=="exp.bs" & degree==1){
-            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
-                .Call(C_HazardBs1C,x0,x,nph,timecat0,timecat,fixobs,param,paramf,as.double(matk),as.double(totk))
+        else {
+            if (base=="pw.cst"){
+                HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                    .Call(C_HazardBs0L,x0,x,nph,timecat0,timecat,fixobs,param,paramf,as.double(matk))
+                }
             }
-        }
-        else if (base=="exp.bs" & degree%in%c(2,3)){
-            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
-                .Call(C_HazardBs23C,x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk))
+            else if (base=="exp.bs" & degree==1){
+                HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                    .Call(C_HazardBs1L,x0,x,nph,timecat0,timecat,fixobs,param,paramf,as.double(matk),as.double(totk))
+                }
             }
-        }
-        else if (base=="exp.ns"){
-            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
-                .Call(C_HazardNsC,x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk),as.double(intk),as.double(nsadj1),as.double(nsadj2))
+            else if (base=="exp.bs" & degree%in%c(2,3)){
+                HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                    .Call(C_HazardBs23L,x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk))
+                }
+            }
+            else if (base=="exp.ns"){
+                HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                    .Call(C_HazardNsL,x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk),as.double(intk),as.double(nsadj1),as.double(nsadj2))
+                }
             }
         }
     }
 
     if (base=="weibull"){
-        HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
-            l.lambda.beta <- NULL
-            l.Lambda.beta <- NULL
-            log.p.LT.1 <- paramf[1] + as.vector(fixobs%*%paramf[-1])
-            log.p.LT.2 <- param[1] + as.vector(nph%*%param[-1])
-            l.lambda.beta <- log.p.LT.2 +x*(exp(log.p.LT.2)-1)+log.p.LT.1
-            if (is.null(x0)){
-                l.Lambda.beta <- x*exp(log.p.LT.2)+log.p.LT.1
+        if (!(Survtype=="counting" & !is.null(random))){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                l.lambda.beta <- NULL
+                Lambda.beta <- NULL
+                lx <- log(x)
+                log.p.LT.1 <- paramf[1] + as.vector(fixobs%*%paramf[-1])
+                log.p.LT.2 <- param[1] + as.vector(nph%*%param[-1])
+                l.lambda.beta <- log.p.LT.2+lx*(exp(log.p.LT.2)-1)+log.p.LT.1
+                if (is.null(x0)){
+                    Lambda.beta <- exp(log.p.LT.1)*x^exp(log.p.LT.2)
+                }
+                else {
+                    Lambda.beta <- exp(log.p.LT.1)*(x^exp(log.p.LT.2)-x0^exp(log.p.LT.2))
+                }
+                valtot <- sum(l.lambda.beta) + sum(Lambda.beta)
+                Test <- sum((is.nan(valtot)) | (valtot==Inf))
+                Result <- list(LogHaz=l.lambda.beta, HazCum0=0, HazCum=Lambda.beta, Test=Test)
+                return(Result)
             }
-            else {
-                l.Lambda.beta <- log(exp(x*exp(log.p.LT.2))-exp(x0*exp(log.p.LT.2)))+log.p.LT.1
+        }
+        else {
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                l.lambda.beta <- NULL
+                Lambda.beta <- NULL
+                lx <- log(x)
+                log.p.LT.1 <- paramf[1] + as.vector(fixobs%*%paramf[-1])
+                log.p.LT.2 <- param[1] + as.vector(nph%*%param[-1])
+                l.lambda.beta <- log.p.LT.2+lx*(exp(log.p.LT.2)-1)+log.p.LT.1
+                Lambda.beta0 <- exp(log.p.LT.1)*x0^exp(log.p.LT.2)
+                Lambda.beta  <- exp(log.p.LT.1)*x^exp(log.p.LT.2)
+                valtot <- sum(l.lambda.beta) + sum(Lambda.beta)
+                Test <- sum((is.nan(valtot)) | (valtot==Inf))
+                Result <- list(LogHaz=l.lambda.beta, HazCum0=Lambda.beta0, HazCum=Lambda.beta, Test=Test)
+                return(Result)
             }
-            valtot <- sum(l.lambda.beta) + sum(l.Lambda.beta)
-            Test <- sum((is.nan(valtot)) | (valtot==Inf))
-            Result <- list(LogHaz=l.lambda.beta, LogCum=l.Lambda.beta, Test=Test)
-            return(Result)
+        }
+    }
+
+    if (Survtype=="counting" & !is.null(random)){
+        Frailty.Adapt <- function(nodes, nodessquare, logweights, clust, clustd, expect, betal, betaL0, betaL, A0, A, var, mh0, muhatcond){
+            obj <- .Call(C_FrailtyAdaptL, nodes, nodessquare, logweights, clust, clustd, expect, betal, betaL0, betaL, A0, A, var, mh0, muhatcond)
+        }
+    }
+    else {
+        Frailty.Adapt <- function(nodes, nodessquare, logweights, clust, clustd, expect, betal, betaL0, betaL, A0, A, var, mh0, muhatcond){
+            obj <- .Call(C_FrailtyAdapt, nodes, nodessquare, logweights, clust, clustd, expect, betal, betaL, A, var, muhatcond)
         }
     }
 
@@ -262,6 +310,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         lambda.pop <- lambda.pop[IdxRnd]
         data.fix <- data.fix[IdxRnd,,drop=FALSE]
         data.nph <- data.nph[IdxRnd,,drop=FALSE]
+        listIdx <- sapply(levels(random.obs),function(x){which(random.obs==x)},simplify=FALSE)
     }
     TotData <- cbind(time.obs,status.obs,lambda.pop,data.fix,data.nph)
     Xlevels <- .getXlevels(Xlevel.formula,TotData)
@@ -355,10 +404,6 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         int.knots <- NULL
         MatK <- NULL
         NsAdj <- list(NULL,NULL)
-        time.obs <- log(time.obs)
-        if (Survtype=="counting"){
-            time.obs.0 <- log(time.obs.0)
-        }
         n.td.base <- 1
         n.ntd <- dim(fix.obs)[2]
         if (n.ntd>1){
@@ -380,7 +425,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         param.names <- c("logLambda","logRho",names.fix,names.nph)
         n.par.fix <- n.td.base+n.ntd+n.td.nph
         param.init <- rep(0,n.par.fix)
-        param.init[1:2] <- 0.1
+        param.init[1:2] <- log(0.1)
     }
 
     # Hazard modelled by the exponential of a B-spline / restricted cubic B-spline / Piecewise constant
@@ -534,6 +579,12 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
             n.clust <- length(clust)
         }
         parent.cst.adj <- rep(0,n.clust)
+        if (Survtype=="counting"){
+            parent.cst.adj0 <- rep(0,n.clust)
+        }
+        else {
+            parent.cst.adj0 <- NULL
+        }
         param.names <- c(param.names,paste(random," [log(sd)]",sep=""))
 
         # Creation of the points and weights of Gauss-Hermite quadrature
@@ -577,12 +628,20 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         else {
             if (!is.null(random)){
                 var.w <- exp(2*p.LT[which.rdm])
-                temp.LT <- Frailty.Adapt(nodes=x.H, nodessquare=x.H.2, logweights=log.rho.H, clust=n.by.clust, clustd=n.by.clust.delta, expect=lambda.pop.delta, betal=temp.H$LogHaz[status.one], betaL=temp.H$LogCum, A=parent.cst.adj, var=var.w, muhatcond=mu.hat.LT)
+                if (Survtype=="counting"){
+                    ## Mode of the integrand of the denominator of the cluster-specific marginal likelihood
+                    MH0 <- -lambertW0(unlist(lapply(listIdx,function(x){sum(temp.H$HazCum0[x])*var.w})))
+                }
+                else {
+                    MH0 <- 0
+                }
+                temp.LT <- Frailty.Adapt(nodes=x.H, nodessquare=x.H.2, logweights=log.rho.H, clust=n.by.clust, clustd=n.by.clust.delta, expect=lambda.pop.delta, betal=temp.H$LogHaz[status.one], betaL0=temp.H$HazCum0, betaL=temp.H$HazCum, A0=parent.cst.adj0, A=parent.cst.adj, var=var.w, mh0=MH0, muhatcond=mu.hat.LT)
                 if (mu.hat.LT==1)
                     res.LT <- temp.LT$MuHat
                 else if (mu.hat.LT==2)
                     res.LT <- temp.LT$SigmaHat
                 else {
+                    env$parent.cst.adj0 <- temp.LT$CstAdj0
                     env$parent.cst.adj <- temp.LT$CstAdj
                     res.LT <- temp.LT$LogLik
                     res.LT[is.nan(res.LT) | abs(res.LT)==Inf] <- .Machine$double.xmax
@@ -597,14 +656,14 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
                     else {
                         log.lambda <- log(temp.l)
                         log.lambda[log.lambda==Inf] <- .Machine$double.xmax
-                        res.LT <- sum(exp(temp.H$LogCum) - status.obs*log.lambda)
+                        res.LT <- sum(temp.H$HazCum - status.obs*log.lambda)
                         res.LT <- min(res.LT,.Machine$double.xmax)
                     }
                 }
                 else {
                     log.lambda <- temp.H$LogHaz
                     log.lambda[log.lambda==Inf] <- .Machine$double.xmax
-                    res.LT <- sum(exp(temp.H$LogCum) - status.obs*log.lambda)
+                    res.LT <- sum(temp.H$HazCum - status.obs*log.lambda)
                     res.LT <- min(res.LT,.Machine$double.xmax)
                 }
             }

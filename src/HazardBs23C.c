@@ -4,8 +4,8 @@
 /* by a quadratic or cubic B-spline)            */
 /* For counting process data (t0, t1)           */
 /* Author: H. Charvat                           */
-/* Last modified: 2016/11/25                    */
-/* Part of the mexhaz 1.4 package               */
+/* Last modified: 2019/11/26                    */
+/* Part of the mexhaz 1.7 package               */
 /************************************************/
 
 #include <R.h>
@@ -16,7 +16,7 @@
 
 SEXP HazardBs23C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixobs, SEXP param, SEXP paramf, SEXP deg, SEXP n, SEXP lw, SEXP matk, SEXP totk)
 {
-  SEXP loghaz, logcum, test, rlist, rlistnames;
+  SEXP loghaz, hazcum0, hazcum, test, rlist, rlistnames;
   int lx = length(x);
   int lnph = length(nph);
   int lleg = length(n);
@@ -37,9 +37,10 @@ SEXP HazardBs23C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fi
   PROTECT(matk = coerceVector(matk,REALSXP));
   PROTECT(totk = coerceVector(totk,REALSXP));
   PROTECT(loghaz = allocVector(REALSXP,lx));
-  PROTECT(logcum = allocVector(REALSXP,lx));
+  PROTECT(hazcum0 = allocVector(REALSXP,1));
+  PROTECT(hazcum = allocVector(REALSXP,lx));
   PROTECT(test = allocVector(LGLSXP,1));
-  int nprotect = 16;
+  int nprotect = 17;
 
   double *X0 = REAL(x0);
   double *X = REAL(x);
@@ -55,7 +56,7 @@ SEXP HazardBs23C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fi
   double *MatK = REAL(matk);
   double *TotK = REAL(totk);
   double *LogHaz = REAL(loghaz);
-  double *LogCum = REAL(logcum);
+  double *HazCum = REAL(hazcum);
 
   int nnph = lnph/lx;
   int nfix = lfix/lx;
@@ -99,10 +100,9 @@ SEXP HazardBs23C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fi
       tempL += IntSpline23((*Fpt), TotKPos[tcz-1], X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], N, lW, lleg, Cst1);
       tempL -= IntSpline23((*Fpt), TotKPos[tcz0-1], X0[z], &TotK[tcz0], &MatK[Cst2*tcz0], TempD, &MyParam[tcz0], N, lW, lleg, Cst1);
       tempH = (*Fpt)(X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], Cst1);
-      tempL = log(tempL);
-      Total += tempH + tempL + tempF;
+      Total += tempH + log(tempL) + tempF;
       LogHaz[z] = tempH + tempF;
-      LogCum[z] = tempL + tempF;
+      HazCum[z] = tempL*exp(tempF);
     }
   }
   else {
@@ -131,25 +131,27 @@ SEXP HazardBs23C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fi
       tempL += IntSpline23((*Fpt), TotKPos[tcz-1], X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], N, lW, lleg, Cst1);
       tempL -= IntSpline23((*Fpt), TotKPos[tcz0-1], X0[z], &TotK[tcz0], &MatK[Cst2*tcz0], TempD, &MyParam[tcz0], N, lW, lleg, Cst1);
       tempH = (*Fpt)(X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], Cst1);
-      tempL = log(tempL);
-      Total += tempL + tempH + tempF;
+      Total += log(tempL) + tempH + tempF;
       LogHaz[z] = tempH + tempF;
-      LogCum[z] = tempL + tempF;
+      HazCum[z] = tempL*exp(tempF);
     }
   }
+  REAL(hazcum0)[0] = 0;
   LOGICAL(test)[0] = (isinf(fabs(Total)) || isnan(Total));
 
   /* assemble the return objects as a list */
-  PROTECT(rlist= allocVector(VECSXP, 3));
+  PROTECT(rlist= allocVector(VECSXP, 4));
   SET_VECTOR_ELT(rlist, 0, loghaz);
-  SET_VECTOR_ELT(rlist, 1, logcum);
-  SET_VECTOR_ELT(rlist, 2, test);
+  SET_VECTOR_ELT(rlist, 1, hazcum0);
+  SET_VECTOR_ELT(rlist, 2, hazcum);
+  SET_VECTOR_ELT(rlist, 3, test);
 
   /* add names to the list elements */
-  PROTECT(rlistnames = allocVector(STRSXP, 3));
+  PROTECT(rlistnames = allocVector(STRSXP, 4));
   SET_STRING_ELT(rlistnames, 0, mkChar("LogHaz"));
-  SET_STRING_ELT(rlistnames, 1, mkChar("LogCum"));
-  SET_STRING_ELT(rlistnames, 2, mkChar("Test"));
+  SET_STRING_ELT(rlistnames, 1, mkChar("HazCum0"));
+  SET_STRING_ELT(rlistnames, 2, mkChar("HazCum"));
+  SET_STRING_ELT(rlistnames, 3, mkChar("Test"));
   setAttrib(rlist, R_NamesSymbol, rlistnames);
 
   UNPROTECT(nprotect+2);
