@@ -1,12 +1,12 @@
-8e40c358fdad16bd2bb46723b3545d32 *DESCRIPTION
+f30f38de743cf158f00d35f3e0eb9e82 *DESCRIPTION
 d08ab9219800f8e2632e1911fdbd8a82 *NAMESPACE
-2cdaeee40cc695a5323992b8fcfb193d *NEWS
+f6dfc9a2c892b9f177cbafedc573bb99 *NEWS
 6f927e7b7bf263463ce1c6590c5d37ac *R/fixef.mexhaz.R
 6ec023e8cbbbe939ea595598dc5ac3d6 *R/lines.predMexhaz.R
-bd12004a746c8e150e2b456468be927e *R/mexhaz.R
+b0475d1067c0a3d03c952e32581a849e *R/mexhaz.R
 8b3c41d8e39fa7af924d3c75a0b35090 *R/plot.predMexhaz.R
 2950eda600107d2f9b583f3f1a945365 *R/points.predMexhaz.R
-7d06837b88103eaa8d949d5e6be37ecd *R/predict.mexhaz.R
+784bfad3c3dc65cc56569f07adf44a1f *R/predict.mexhaz.R
 3a8f1c3f0d4ceec2ef8fba50859118dc *R/print.mexhaz.R
 485145c787a5ac93f5ab41574da4f2ca *R/print.predMexhaz.R
 b0e47c31758d048995cc1aa0e5d401a3 *R/print.summary.mexhaz.R
@@ -20,7 +20,7 @@ bd663c7a3a43b42b5aa808ce3ce3b7f2 *man/fixef.Rd
 7dbec3fb5ab3519247dc41559296270a *man/fixef.mexhaz.Rd
 49ed267367a08ce94c6878211cbe3652 *man/lines.predMexhaz.Rd
 dbb406a8fd98c9e2c39147d834900244 *man/mexhaz-package.Rd
-a466683a2569ae1c5afbc9b43cfe3ef1 *man/mexhaz.Rd
+64db2c9f8338dd105062cb83359501d8 *man/mexhaz.Rd
 e731e15fd081882e7ae375e1996294e9 *man/plot.predMexhaz.Rd
 fae005cee6dc6d756c21e193b943414c *man/points.predMexhaz.Rd
 c638feeaaff66e130b74ea93b0698128 *man/predict.mexhaz.Rd
@@ -41,7 +41,7 @@ f85796715d0c204d05dc232cfb21390b *src/DeltaBs23R.c
 f24a8f773f6c3f9ad89c7d90609a5cd2 *src/DeltaNsR.c
 df07f87d0653a4a11909af99d2ca763d *src/DeltaWeibR.c
 f2a1841fdcb1d1ef3dc9bdf49c185bed *src/FrailtyAdapt.c
-8176441c51fe4e109b80fb398748dc1b *src/FrailtyAdaptL.c
+a34447874aa3579aa9cefd425f5121bb *src/FrailtyAdaptL.c
 3b5eaee86a2b86badb21d0e6046c4a16 *src/HazardBs0C.c
 98eba753eadeccfdfb73a1c9f0cef860 *src/HazardBs0L.c
 8b8d1cc5d65e6b1a25831a16c034c6a7 *src/HazardBs0R.c
@@ -58,4 +58,4 @@ d318468090a80550419a4462b2882cba *src/OptFunc.c
 d32e1e7849500b901a6806dd4a664d9f *src/OptFunc.h
 20964480e15a0a4d65bfbe89d40b9467 *src/SplineFunc.c
 52f2cc0d98ec8c0da97d885185dd066f *src/SplineFunc.h
-baa6edf3e738ef1b7524d25eda10019a *src/init.c
+cef15d7dd6a33fcf958448f99e8c90de *src/init.c

@@ -1,3 +1,13 @@
+Changes in Version 1.8
+  
+  Fixed a bug in the predict.mexhaz() function that resulted in
+  missing values for the variances of the logarithm of the hazard and
+  of the cumulative hazard when confidence intervals are estimated by
+  Monte Carlo simulations (Thanks Johann!).
+
+  Initial values for the logarithm of the parameters of the Weibull
+  hazard set to 0.1.
+
 Changes in Version 1.7
   
   Implemented the correct version of the shared frailty model for left
@@ -5,7 +15,7 @@ Changes in Version 1.7
 
   Default value of argument 'verbose' set to 0.
 
-  Initial values for the parameters of the Weibull hazard set to log(0.1).
+  Initial values for the parameters of the Weibull hazard set to 0.1.
 
 
 Changes in Version 1.6

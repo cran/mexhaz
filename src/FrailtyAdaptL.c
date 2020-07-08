@@ -4,8 +4,8 @@
 /* quadrature                               */
 /* in the presence of left truncation       */
 /* Author: H. Charvat                       */
-/* Last modified: 2019/12/04                */
-/* Part of the mexhaz 1.7 package           */
+/* Last modified: 2020/07/06                */
+/* Part of the mexhaz 1.8 package           */
 /********************************************/
 
 #include <R.h>
@@ -61,7 +61,7 @@ SEXP FrailtyAdaptL(SEXP nodes, SEXP nodessquare, SEXP logweights, SEXP clust, SE
   double *VecCstAdj = REAL(vecCstAdj);
 
   int k, z, nclust, lenclust, lenclustd;
-  double lbetaL0, lbetaL, muhat, sigmahat0, sigmahat, logsigmahat0, logsigmahat, ddmli0, ddmli, resclust0, resclust, xstar0, xstar;
+  double lbetaL0, lbetaL, muhat, sigmahat0, sigmahat, logsigmahat0, logsigmahat, ddmli, ddmli0, resclust0, resclust, xstar0, xstar;
   int d = 0, dd = 0;
   int essai;
   double casup, cainf;

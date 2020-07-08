@@ -134,8 +134,7 @@ default, \code{n.gleg=20}.
 
     for the baseline hazard:
 
-    if \code{base="weibull"}, the scale and shape parameters are set
-    to log(0.1);
+    if \code{base="weibull"}, the logarithm of the scale and shape parameters is set to 0.1;
 
     if \code{base="exp.bs"}, the parameters of the B-spline are all
     set to -1;

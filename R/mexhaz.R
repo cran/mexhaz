@@ -425,7 +425,7 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         param.names <- c("logLambda","logRho",names.fix,names.nph)
         n.par.fix <- n.td.base+n.ntd+n.td.nph
         param.init <- rep(0,n.par.fix)
-        param.init[1:2] <- log(0.1)
+        param.init[1:2] <- 0.1
     }
 
     # Hazard modelled by the exponential of a B-spline / restricted cubic B-spline / Piecewise constant
@@ -627,13 +627,10 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         }
         else {
             if (!is.null(random)){
+                MH0 <- 0
                 var.w <- exp(2*p.LT[which.rdm])
                 if (Survtype=="counting"){
-                    ## Mode of the integrand of the denominator of the cluster-specific marginal likelihood
                     MH0 <- -lambertW0(unlist(lapply(listIdx,function(x){sum(temp.H$HazCum0[x])*var.w})))
-                }
-                else {
-                    MH0 <- 0
                 }
                 temp.LT <- Frailty.Adapt(nodes=x.H, nodessquare=x.H.2, logweights=log.rho.H, clust=n.by.clust, clustd=n.by.clust.delta, expect=lambda.pop.delta, betal=temp.H$LogHaz[status.one], betaL0=temp.H$HazCum0, betaL=temp.H$HazCum, A0=parent.cst.adj0, A=parent.cst.adj, var=var.w, mh0=MH0, muhatcond=mu.hat.LT)
                 if (mu.hat.LT==1)

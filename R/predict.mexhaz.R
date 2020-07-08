@@ -141,8 +141,8 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
         HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
             log.p.LT.1 <- paramf[1] + as.vector(fixobs%*%paramf[-1])
             log.p.LT.2 <- param[1] + as.vector(nph%*%param[-1])
-            l.lambda.beta <- log.p.LT.2 +x*(exp(log.p.LT.2)-1)+log.p.LT.1
-            Lambda.beta <- exp(log.p.LT.1)*x^exp(log.p.LT.2)
+            l.lambda.beta <- log.p.LT.2 + (exp(log.p.LT.2)-1)*x + log.p.LT.1
+            Lambda.beta <- exp(log.p.LT.1+exp(log.p.LT.2)*x)
             Result <- list(LogHaz=l.lambda.beta, HazCum=Lambda.beta)
             return(Result)
         }
@@ -405,18 +405,20 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
     }
     else if (conf.int=="simul"){
         varcov <- vcov
-        Res1 <- matrix(0,nb.time.pts,nb.sim)
-        Res2 <- matrix(0,nb.time.pts,nb.sim)
+        lRes1 <- Res1 <- matrix(0,nb.time.pts,nb.sim)
+        lRes2 <- Res2 <- matrix(0,nb.time.pts,nb.sim)
         Coef <- mvrnorm(nb.sim,mu=coef,Sigma=varcov)
         for (i in 1:nb.sim){
             p.td <- Coef[i,which.td]
             p.ntd <- Coef[i,which.ntd]
             temp.H <- HazardInt(x0=time.new.0,x=time.new,nph=nph.new,timecat0=time.cat.0,timecat=time.cat,fixobs=fix.new,param=p.td,paramf=p.ntd,deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]])
+            lRes1[,i] <- temp.H$LogHaz
+            lRes2[,i] <- log(temp.H$HazCum)
             Res1[,i] <- exp(temp.H$LogHaz)
             Res2[,i] <- exp(-temp.H$HazCum)
         }
-        Var.Log.Haz <- apply(Res1,1,FUN=var)
-        Var.Log.Cum <- apply(Res2,1,FUN=var)
+        Var.Log.Haz <- apply(lRes1,1,FUN=var)
+        Var.Log.Cum <- apply(lRes2,1,FUN=var)
         BInf1 <- apply(Res1,1,quantile,prob=0.025)
         BSup1 <- apply(Res1,1,quantile,prob=0.975)
         BInf2 <- apply(Res2,1,quantile,prob=0.025)
@@ -428,8 +430,8 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
     if (conf.int!="none"){
         res1 <- data.frame(hazard=lambda,hazard.inf=BInf1,hazard.sup=BSup1,
                            surv=Surv,surv.inf=BInf2,surv.sup=BSup2)
+        variances <- data.frame(var.log.haz=Var.Log.Haz,var.log.cum=Var.Log.Cum)
         if (conf.int=="delta"){
-            variances <- data.frame(var.log.haz=Var.Log.Haz,var.log.cum=Var.Log.Cum)
             df.ct <- data.frame(hazard=delta.type.h,surv=delta.type.s)
         }
     }
