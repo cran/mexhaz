@@ -1,0 +1,1721 @@
+\documentclass[nojss, shortnames]{jss}
+
+% \VignetteIndexEntry{excesshazard}
+% \VignetteEngine{utils::Sweave}
+
+\author{Hadrien Charvat\\National Cancer Center\\Tokyo, Japan \And
+  Aur\'elien Belot\\London School of Hygiene \\and Tropical Medicine, UK}
+\title{\pkg{mexhaz}: An \proglang{R} Package for Fitting Flexible Hazard-Based
+  Regression Models for Overall and Excess Mortality with a Random Effect}
+
+%% for pretty printing and a nice hypersummary also set:
+\Plainauthor{Hadrien Charvat, Aur\'elien Belot} %% comma-separated
+\Plaintitle{mexhaz: An R Package for Fitting Flexible Hazard-Based
+  Regression Models for Overall and Excess Mortality with a Random Effect} %% without formatting
+\Shorttitle{mexhaz: Mixed-Effect Excess Hazard Regression Models} %% a short title (if necessary)
+
+%% an abstract and keywords
+\Abstract{This vignette provides a description of the \proglang{R}
+  package \pkg{mexhaz}. It is based on an article accepted for
+  publication in the \textit{Journal of Statistical Software}
+  \citep{CharvatJSS}. The \pkg{mexhaz} package allows for fitting
+  flexible hazard-based regression models with the possibility to add
+  time-dependent effects of covariates and to account for a two-level
+  hierarchical structure in the data through the inclusion of a
+  normally distributed random intercept (i.e., a log-normally
+  distributed shared frailty). Moreover, \pkg{mexhaz}-based models can
+  be fitted within the excess hazard setting by allowing the
+  specification of an expected hazard in the model. These
+  models are of common use in the context of the analysis of
+  population-based cancer registry data.
+
+  Follow-up time can be entered in the right-censored or counting
+  process input style, the latter allowing models with delayed
+  entries. The logarithm of the baseline hazard can be flexibly
+  modelled with B-splines or restricted cubic splines of
+  time. Parameters estimation is based on likelihood maximisation: in
+  deriving the contribution of each observation to the
+  cluster-specific conditional likelihood, Gauss-Legendre quadrature
+  is used to calculate the cumulative hazard; the cluster-specific
+  marginal likelihoods are then obtained by integrating over the
+  random effects distribution, using adaptive Gauss-Hermite
+  quadrature. Functions to compute and plot the predicted (excess)
+  hazard and (net) survival (possibly with cluster-specific
+  predictions in the case of random effect models) are provided. We
+  illustrate the use of the different options of the \pkg{mexhaz}
+  package and compare the results obtained with those of other
+  available \proglang{R} packages.
+
+}
+\Keywords{adaptive Gauss-Hermite quadrature, excess hazard, flexible models, frailty models, time-dependent effects, \proglang{C}}
+\Plainkeywords{adaptive Gauss-Hermite quadrature, excess hazard, flexible models, frailty models, time-dependent effects, C} %% without formatting
+%% at least one keyword must be supplied
+
+%% publication information
+%% NOTE: Typically, this can be left commented and will be filled out by the technical editor
+%% \Volume{50}
+%% \Issue{9}
+%% \Month{June}
+%% \Year{2012}
+%% \Submitdate{2012-06-04}
+%% \Acceptdate{2012-06-04}
+
+%% The address of (at least) one author should be given
+%% in the following format:
+\Address{
+  Hadrien Charvat\\
+  Division of Prevention\\
+  Center for Public Health Sciences\\
+  National Cancer Center\\
+  Tokyo, Japan\\
+  E-mail: \email{chadrien@ncc.go.jp}\\
+\\
+  Aur\'elien Belot\\
+  Cancer Survival Group\\
+  Faculty of Epidemiology and Population Health\\
+  Department of Non-Communicable Disease Epidemiology\\
+  London School of Hygiene and Tropical Medicine\\
+  London, United Kingdom\\
+  E-mail: \email{Aurelien.Belot@lshtm.ac.uk}\\
+}
+%% It is also possible to add a telephone and fax number
+%% before the e-mail in the following format:
+%% Telephone: +43/512/507-7103
+%% Fax: +43/512/507-2851
+
+
+%% end of declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{ragged2e}
+\usepackage{tabularx}
+\renewcommand\tabularxcolumn[1]{>{\Centering}m{#1}}
+
+\newcommand{\ud}{\,\mathrm{d}}
+\newcommand{\xb}{\mathbf{x}}
+\newcommand{\zb}{\mathbf{z}}
+\newcommand{\bbt}{\boldsymbol{\beta}}
+\newcommand{\bth}{\boldsymbol{\theta}}
+\newcommand{\Oij}{\mathbf{O}_{ij}}
+\newcommand{\Oj}{\mathbf{O}_j}
+\newcommand{\Oi}{\mathbf{O}_i}
+
+
+\begin{document}
+\SweaveOpts{concordance=FALSE, prefix.string=JSS}
+
+\section{Introduction}
+
+In the context of the analysis of time-to-event data, parametric and
+semi-parametric hazard regression models are widely used when the
+interest lies in estimating the impact of covariates on the time to
+occurrence of the event of interest. The semi-parametric Cox
+proportional hazard model is still widely used, even if its creator
+himself argued that parametric models should be used more often in
+practice, due to powerful features for in- and out-sample predictions,
+as well as the advantage of allowing statistical inference using
+maximum likelihood theory \citep[see][]{reidcox}. However, using
+parametric regression models requires the assumption of a particular
+distribution for the observed survival times, and this assumption may
+sometimes be considered as too restrictive (e.g., constant or
+monotonic hazard for the exponential and Weibull distribution,
+respectively). One possibility to take advantage of parametric models
+without making unrealistic assumptions on the shape of the hazard (and
+on the corresponding survival) is to use flexible functions, such as
+fractional polynomials or regression splines. The correct modelling of
+the data might also require the inclusion of time-dependent effects of
+some of the covariates. Indeed, it has been shown in many studies
+that the effects of covariates such as age may vary with time
+since diagnosis, especially in cancer epidemiology, so that the
+proportional hazard assumption does no longer hold \citep{Quantin99,
+  Bossard}.
+
+Another aspect one might have to deal with is the presence of a
+hierarchical structure in the data: individuals from the same cluster
+share common characteristics (e.g., cancer patients from the
+same geographical area may have similar access to therapeutical
+resources) so that the assumption of independence of the survival
+times no longer holds and taking account of this hierarchical
+structure is necessary for correct statistical inference. In such a
+case, shared frailty models (also called multilevel or mixed-effect
+survival models) have been shown to provide a satisfactory and
+convenient theoretical framework by allowing the introduction of a
+random effect defined at the cluster level that accounts for the
+inter-cluster heterogeneity \citep{duchateau2008frailty,
+  wienke2010frailty}.
+
+In population-based cancer research, it is generally of interest to
+disentangle the cancer-specific mortality from the mortality from
+other causes, mainly because cancer patients are usually old and, as a
+consequence, more prone to die from diseases other than their cancer
+(these other diseases thus act as competing causes of death). The
+general principle is to assume that the observed mortality hazard can
+be split into two components, one representing the mortality from
+cancer and the other one representing the impact of other causes of
+death. When information on the cause of death is available for each
+individual, this can be achieved by estimating cause-specific
+mortality hazards \citep{putter07, belot2010flexible,
+  Haller}. However, when using population-based cancer registry data,
+the cause of death is usually unavailable or inaccurate (it might even
+be difficult to define a cause of death for elder patients
+with multiple diseases). Thus specific methods have been developed
+\citep{Esteve90, Giorgi03, Nelson, remontet2007overall, Perme2012}
+that rely on the same general principle than in the cause-specific
+setting (i.e., the overall mortality rate is seen as the sum
+of two components), but it requires the additional assumption that the
+mortality hazard for other causes of death can be approximated by the
+mortality hazard of the general population (for a given set of
+demographic characteristics observed on each cancer patient). These
+methods allow the estimation of the so-called excess
+  mortality hazard, which can be interpreted as the cancer-specific
+mortality hazard. The net survival, i.e., the
+survival that would be observed if cancer patients could only die from
+their cancer, can then be obtained from the estimated excess mortality
+hazard \citep{belot2019CE}.
+
+Within the \proglang{R} software environment, different packages have
+been developed for fitting flexible hazard models based on a full or
+penalised likelihood framework. In the full likelihood framework, the
+contributed \proglang{R} package \pkg{flexsurv} \citep{Jackson2016}
+uses specific distributions for the survival time, including the
+generalized gamma and F distribution families and also spline-based
+models. Facilities are also proposed to fit excess hazard regression
+models. Another \proglang{R} package named \pkg{flexrsurv}
+\citep{flexrsurv-pkg} has been developed for fitting two types of
+flexible hazard regression models
+\citep{remontet2007overall,Mahboubi2011} in the excess hazard
+setting. It is also worth mentioning the \pkg{relsurv} package
+\citep{MajaJSS, PoharinR, Pohareasy} which, although primarily
+aimed at non-parametric net survival estimation, can also be used to
+fit excess hazard regression models with either a baseline hazard
+described by piecewise constant functions (full likelihood framework)
+or with a baseline hazard left unspecified (in the same spirit as the
+Cox model) using an expectation-maximisation algorithm for parameter
+estimation \citep{Pohar2009}. However, neither \pkg{flexsurv},
+\pkg{flexrsurv} nor \pkg{relsurv} has the possibility to account for
+correlated survival times. The package \pkg{rstpm2} \citep{rstpm2-pkg}
+allows flexible modelling on the cumulative hazard scale, in the same
+spirit as the Royston-Parmar model \citep{Roystonparmar}, using either
+a fully parametric or a penalised approach. Excess hazard models can
+be fitted and clustered data can be accounted for by the inclusion of
+a Gamma or log-normally distributed frailty.
+
+Regarding other existing \proglang{R} packages allowing the inclusion
+of random effects to analyse correlated survival times,
+\pkg{frailtypack} is probably the most developed \citep{Rondeau2012},
+with functions for fitting shared and nested frailty models as well as
+joint modelling of multiple time-to-event processes. Users can specify
+either a Gamma or a log-normal frailty distribution, and estimated
+parameters are obtained by using a penalized likelihood framework. In
+the full likelihood framework, the \pkg{parfm} package has been
+developped for shared frailty models with a parametric distribution
+associated to the time-to-event \citep{Munda2012}, with many choices
+supported for the frailty distributions and parametric baseline
+hazards. Other \proglang{R} packages developed for fitting
+random-effect models on time-to-event data include \pkg{survival}
+\citep{survival-pkg} (via the \code{frailty()} element that can be
+added to the formula of \code{survreg()}) for parametric survival
+regression model, and, for semi-parametric hazard
+  models, the \pkg{coxme} \citep{coxme-pkg} and \pkg{frailtyEM}
+\citep{frailtyEM19} packages, among others. However, these packages do not
+offer functionalities for excess hazard regression modelling.
+
+The \pkg{mexhaz} package allows for both flexible specification of the
+hazard and shared frailty modelling in the excess hazard setting, thus
+complementing the existing \proglang{R} packages. Besides the Weibull
+model, models using piecewise constant functions or splines (B-splines
+and restricted cubic splines) to describe the logarithm of the hazard are
+implemented. Time-dependent effects of covariates and
+  delayed entry times can be accounted for and
+clustered data can be modelled through the inclusion of a
+log-normally distributed frailty. Table~\ref{tab:1} summarizes the
+functionalities offered by \pkg{mexhaz} compared to some of the
+packages already cited.
+
+As regards the domain of application, the \pkg{rstpm2} package is the
+one that most closely matches \pkg{mexhaz}'s capabilities. However,
+while \pkg{rstpm2} proposes a flexible modelling on the cumulative
+hazard scale, \pkg{mexhaz} offers modelling on the hazard scale. These
+equally valid approaches have advantages and limitations: modelling on
+the cumulative hazard scale is usually faster because there is no need
+for integration of the hazard; on the other hand, it might suffer from
+problems due to the instability of numerical differentiation. Besides,
+the interpretation of results from models defined on the cumulative
+hazard scale can present difficulties when multiple time-dependent
+effects are included \citep[see section 7.6.3 in][]{Roystonbook}. It
+should also be noted that different modelling choices result in
+different constraints: models of the logarithm of the cumulative
+excess hazard (as in \pkg{rstpm2}) impose a constraint of positivity
+for the overall hazard, so that the excess hazard can become negative,
+while modelling the logarithm of the excess hazard, as is performed in
+\pkg{mexhaz}, imposes positivity of the excess hazard.
+
+The aim of this paper is to present the full likelihood-based approach
+implemented in \pkg{mexhaz} for fitting flexible regression models
+defined on the hazard scale. The package allows the user to deal with
+i) time-dependent effects of covariates, ii) correlated survival
+times and iii) estimation of the disease-specific mortality hazard
+without relying on cause of death information (excess hazard
+model). In the first section, we present the general framework of
+flexible hazard-based regression models and describe their extension
+to excess hazard and mixed-effect (possibly, excess) hazard models. We then
+proceed to illustrate the use of the package in the second section.
+
+
+
+\section{Flexible parametric hazard-based regression model}
+\subsection{General framework}
+
+In the following, we are concerned with time-to-event data,
+i.e., data recording the occurrence of an event
+(death, disease, relapse, etc.) along time. In this context, 'survival
+at time $t$' refers to the state of not having presented the event by time $t$.
+The observed survival time, $t$, of an individual can then be seen as the
+realisation of a non-negative random variable $T$. If we denote by $f$
+the probability density function of $T$, the cumulative
+probability function, $F$, is defined by the relationship:
+
+\begin{equation}
+  \label{eq:1}
+  F(t) = P(T\leq t)=\displaystyle\int_0^tf(u)\ud u
+\end{equation}
+
+The survival at time $t$, representing the probability of being
+'alive' (free of the event) at $t$, is then defined as $S(t) = 1 - F(t)$.
+
+Besides, a central quantity in survival analysis is the hazard,
+$\lambda$, representing the instantaneous failure rate (expressed as a
+number of events per person-time) and defined formally as:
+\begin{equation}
+  \label{eq:2}
+  \lambda(t) = \lim_{\ud t\rightarrow 0}\frac{P(t\leq T<t+\ud t|T\geq
+    t)}{\ud t}
+\end{equation}
+
+The hazard is linked to $f$ and $S$ through the following relationship:
+\begin{equation}
+  \label{eq:3}
+  \lambda(t)=\frac{f(t)}{S(t)}
+\end{equation}
+from which we can derive:
+
+\begin{equation}
+  \label{eq:4}
+  S(t) = \exp\Bigl\{-\int_0^t\lambda(u)\ud u\Bigr\}
+\end{equation}
+
+Due to the presence of right censoring and left truncation, most
+methods developed for the analysis of time-to-event data are based on
+the hazard \citep{Cox84, Geskus15}, and we will focus in this paper
+on hazard-based regression models.
+
+\subsubsection{Derivation of the likelihood}
+
+First of all, let us define some notations. For each individual $j$,
+$j = 1,\ldots,n$, let $t_{0j}$ denote the time at entry, $t_{j}$ the
+observed failure time (which is defined as the minimum between the
+survival time and the censoring time), and $\delta_{j}$ an
+indicator variable taking the value 1 in case of occurrence of the
+event at $t_j$ and 0 in case of censoring.
+
+Suppose that we want to describe the hazard in the study population by
+a function of time and of a vector of covariates (such as age, gender, etc.)
+parameterized by $\bbt$, the vector of parameters to be estimated. Under the hypothesis of non-informative censoring, the
+contribution of the unknown censoring distribution can be omitted from
+the likelihood function and we can thus write the likelihood for
+individual $j$ with covariates $\xb_j$ as \citep{Kalbfleisch}:
+
+\begin{eqnarray}
+  \label{eq:5}
+\nonumber  \mathrm{L}_{j}(\bbt)&=&\frac{f(t_{j},\xb_{j})^{\delta_j}S(t_{j},\xb_{j})^{1-\delta_j}}{S(t_{0j},\xb_{j})}\\
+&=& \lambda(t_{j},\xb_{j})^{\delta_{j}}\exp\Bigl\{-\int_{t_{0j}}^{t_{j}}\lambda(u,\xb_{j})\ud u\Bigr\}
+\end{eqnarray}
+
+Thus, the log-likelihood function for the whole population is obtained
+as the sum of the individual contributions:
+\begin{eqnarray}
+  \label{eq:6}
+  \nonumber  \ell(\bbt)&=&\displaystyle\sum_{j=1}^n\log\bigl(\mathrm{L}_{j}(\bbt)\bigr)\\
+    &=&\displaystyle\sum_{j=1}^n\Bigl\{\delta_j\log\bigl(\lambda(t_j,\xb_j)\bigr)-\int_{t_{0j}}^{t_{j}}\lambda(u,\xb_j)\ud
+    u\Bigr\}
+\end{eqnarray}
+Note that if $t_{0j}=0$ for all individuals (no late entries), the
+log-likelihood can be written:
+\begin{equation}
+  \label{eq:7}
+    \ell(\bbt)=\displaystyle\sum_{j=1}^n\Bigl\{\delta_j\log\bigl(\lambda(t_j,\xb_j)\bigr)-\Lambda(t_{j},\xb_j)\Bigr\}
+\end{equation}
+where $\displaystyle\Lambda(t)=\int_0^t\lambda(u)\ud u$ is the cumulative hazard.
+%\clearpage
+
+\subsection{Extension to net survival analysis: Excess hazard regression model}
+
+In the context of the analysis of the mortality of cancer patients, we
+usually want to take into account the following situation: cancer
+patients may die from their cancer (either directly as a consequence
+of the natural progression of the disease, or indirectly as a
+consequence of the treatment) but they might also die from other
+causes like individuals sharing the same characteristics (age, gender,
+birth cohort, etc.) but not diagnosed with cancer. In other words, we
+would like to quantify the excess mortality that cancer patients
+experience because of their disease. One possible way to answer this
+question is to use the so-called excess hazard approach: it is based
+on the idea that the overall hazard may be decomposed into a sum of
+two hazards, one taking into account the excess mortality that can be
+attributed to the disease under study, $\lambda_e$, and the other that
+takes care of all the other possible causes of death,
+$\lambda_{oth}$. The objective is then to estimate $\lambda_e$ while
+considering $\lambda_{oth}$ as known. Provided that the prevalence of
+the disease under study (or at least, that the mortality from this
+disease) is reasonably low in the general population, $\lambda_{oth}$
+can be approximated by the population (or expected) mortality hazard,
+$\lambda_p$, usually obtained from national statistics institutes and
+described as a function of demographic variables, such as sex, age,
+year, etc. This results in the following model:
+
+\begin{equation}
+\lambda(t,\xb,\tilde{\zb}) = \lambda_e(t,\xb) + \lambda_p(a+t,y+t,\tilde{\zb})
+\label{eq:8}
+\end{equation}
+
+where $a$ and $y$ represent age at diagnosis and year of diagnosis,
+respectively, $\xb$ is a vector of covariates and
+$\tilde{\zb}$ a vector of demographic variables used to define the
+population mortality ($\tilde{\zb}$ is usually a subset of
+$\xb$) excluding age and year of diagnosis. In practice,
+$\lambda_p$ is obtained from population mortality tables and depends
+on age, year of diagnosis and other variables such as gender, county
+of residence \citep{Esteve90, remontet2007overall, Perme2012}. In the
+following, we define $\zb=(a,y,\tilde{\zb})$ and write
+conveniently $\lambda_p$ as a function of $t$ and $\zb$.
+
+The excess hazard model consists in modelling $\lambda_e$ by a
+function of time and covariates parameterized by $\bbt$. The
+log-likelihood is obtained by replacing $\lambda$ in
+Equation~\ref{eq:6} by its expression under the excess hazard
+assumption (Equation~\ref{eq:8}):
+
+\begin{equation}
+  \label{eq:10}
+    \ell(\bbt)=\displaystyle\sum_{j=1}^n\Bigl\{\delta_j\log\bigl(\lambda_e(t_j,\xb_j)+\lambda_p(t_j,\zb_j)\bigr)-\int_{t_{0j}}^{t_j}\bigl(\lambda_e(u,\xb_j)+\lambda_p(u,\zb_j)\bigr)\ud u\Bigr\}
+\end{equation}
+
+The quantity $\sum_{j=1}^n\int_{t_{0j}}^{t_j}\lambda_p(u,\zb_j)\ud u$
+does not depend on the parameters to be estimated and is usually
+dropped when maximising the likelihood. This implies that only the
+value of the population hazard $\lambda_p$ at the end of follow-up for
+each individual is necessary to specify the likelihood.
+
+Also note that if we set $\lambda_p$ to 0 for all individuals,
+Equation~\ref{eq:8} simplifies to Equation~\ref{eq:6} and specifies a
+model for the overall hazard.
+
+%\clearpage
+
+\subsection{Extension to hierarchical survival data: Mixed-effect excess hazard regression model}
+
+Now suppose that individuals
+come from different clusters (e.g., geographical areas): we
+thus have a two-level hierarchical structure with individuals nested
+in clusters. People from the same cluster share common characteristics
+so that their survival times are correlated. In order to take this
+structure into account, one possibility is to extend our previous
+model by including a random effect at the cluster level.
+
+First of all, let us refine our notations. For each individual $j$,
+$j = 1,\ldots,n_i$ from cluster $i$, $i = 1,\ldots,D$,
+let $t_{ij}$ denote the observed failure time and $\delta_{ij}$ an
+indicator variable taking the value 1 in case of an event and 0 in case of
+censoring. Our mixed-effect excess
+hazard regression model can be written as:
+
+\begin{equation}
+  \label{eq:11}
+\lambda(t,\xb,\zb,w)=\lambda_{me}(t,\xb,w)+\lambda_p(t,\zb)
+\end{equation}
+
+with
+
+\begin{equation}
+  \label{eq:12}
+    \lambda_{me}(t,\xb,w)=\lambda_e(t,\xb)\exp(w)
+\end{equation}
+
+where $w$ is a random effect assumed to be normally
+distributed with mean 0 and variance $\sigma^2$. Note that this model
+can be parameterized in terms of $u=\exp\{w\}$, a quantity known
+as the shared frailty ("shared frailty models" is an equivalent
+term for designing mixed-effect hazard models): the distributional
+assumption of our model thus corresponds to a log-normally distributed
+shared frailty.
+
+In the case of non-left truncated data (i.e., $t_{0ij}=0$ for all
+individuals), the likelihood for a single observation $j$ from cluster
+$i$ conditional on the value of the random effect is:
+
+\begin{equation}
+  \label{eq:13}
+  \mathrm{L}_{ij}^C(\bbt|w_i)=\bigl\{\lambda_{me}(t_{ij},\xb_{ij},w_i)+\lambda_p(t_{ij},\zb_{ij})\bigr\}^{\delta_{ij}}
+S(t_{ij},\xb_{ij},\zb_{ij},w_i)
+\end{equation}
+with
+\begin{equation}
+  \label{eq:14}
+S(t_{ij},\xb_{ij},\zb_{ij},w_i)=\exp\bigl\{-\Lambda_{me}(t_{ij},\xb_{ij},w_i)-\Lambda_p(t_{ij},\zb_{ij})\bigr\}
+\end{equation}
+
+In practice, the last term of the exponential in Equation~\ref{eq:14} is
+omitted from the estimation procedure because it has no impact on the
+maximization of the likelihood. The conditional likelihood for cluster $i$ is:
+
+\begin{equation}
+  \label{eq:15}
+      \displaystyle \mathrm{L}_i^C(\bbt|w_i)=\prod_{j=1}^{n_i}\mathrm{L}_{ij}^C(\bbt|w_i)
+\end{equation}
+
+Then, the marginal likelihood for cluster $i$ is obtained by
+integrating the conditional likelihood over the distribution of the
+random effect:
+
+\begin{equation}
+  \label{eq:16}
+      \mathrm{L}_i^M(\bbt,\sigma)=\displaystyle\int_{-\infty}^{\infty}\mathrm{L}_i^C(\bbt|w_i)\,\phi(w_i,0,\sigma)\ud w_i
+\end{equation}
+
+where
+$\phi(x,\mu,\sigma)=\frac{1}{\sqrt{2\pi}\sigma}\exp\Bigl\{-\frac{1}{2}\bigl(\frac{x-\mu}{\sigma}\bigr)^2\Bigr\}$.
+
+The model parameters $(\bbt^\top,\sigma)^\top$ can then be estimated by
+maximizing the full log-likelihood:
+
+\begin{equation}
+  \label{eq:17}
+  \ell(\bbt,\sigma)=\displaystyle\sum_{i=1}^D\log\bigl\{\mathrm{L}_i^M(\bbt,\sigma)\bigr\}
+\end{equation}
+
+Note once again that we obtain the likelihood for a standard
+mixed-effect hazard model when $\lambda_p$ is set to 0 (which
+corresponds to modelling the overall hazard).
+
+In the presence of left truncation, the formulation of the
+  likelihood must take account of the fact that the delayed entry times
+  are conditional on the value of the frailty (defined at
+  $t=0$). Indeed, individuals with a lower value of the frailty are more
+  likely to be alive up to a given time, so that the distribution of
+  the frailty in a population with delayed entry times differs from
+  the distribution of the frailty in the original population
+  \citep{wienke2010frailty, vdBerg2016, Crowther2016}. The marginal likelihood for
+cluster $i$ then becomes:
+
+\begin{equation}
+  \label{eq:16b}
+      \mathrm{L}_i^M(\bbt,\sigma)=\frac{\displaystyle\int_{-\infty}^{\infty}\mathrm{L}_i^C(\bbt|w_i)\,\phi(w_i,0,\sigma)\ud
+        w_i}{\displaystyle\int_{-\infty}^{\infty}\prod_{j=1}^{n_i}\Bigl\{S(t_{0ij},\xb_{ij},\zb_{ij},w_i)\Bigr\}\,\phi(w_i,0,\sigma)\ud w_i}
+\end{equation}
+
+where $t_{0ij}$ is the delayed entry time for individual $j$ from
+cluster $i$. Also note that, here again, when modelling the excess
+mortality hazard, the denominator involves a term related to the
+expected hazard that can be omitted from the likelihood maximisation
+procedure.
+
+\subsection[Model specificities]{Model specificities}
+
+\subsubsection{Model parametrisation: Functional forms for the
+  baseline hazard and the time-dependent effects}
+
+In \pkg{mexhaz}, the hazard, $\lambda$ (in the classical setting), or
+the excess hazard, $\lambda_e$ (in the excess hazard setting), is
+modelled as a function of time and some covariates
+depending on a vector of parameters $\bbt$. In the following, we will
+use the generic notation $\widetilde{\lambda}$ to refer to either
+$\lambda$ or $\lambda_e$ depending on the setting.
+
+The user can choose between the so-called Weibull model and flexible
+parametric models of the hazard based on either a piecewise constant function, B-splines
+(up to degree 3) or restricted cubic splines.
+
+Concerning the Weibull model, the general expression of the hazard, $\widetilde{\lambda}$, as a function of time
+$t$ and covariates $\xb$ (assuming that the first
+$N$ variables are modelled with a proportional effect and the $M$
+following are modelled with a time-dependent effect), is:
+
+\begin{equation}
+\label{eq:17b}
+  \widetilde{\lambda}(t,\xb)= \rho(\xb)\theta(\xb)t^{\theta(\xb)-1}
+\end{equation}
+whith $\rho$ and $\theta$ respectively the scale and shape
+parameters of the Weibull function depending on $\xb$ through the relationships:
+
+\begin{equation}
+  \label{eq:17c}
+  \begin{cases}
+  \vphantom{\displaystyle\int_0^n}\displaystyle \rho(\xb)=\exp\Bigl\{\gamma_0+\sum_{k=1}^{M+N}\gamma_{k}\,x_k\Bigr\}\\
+  \vphantom{\displaystyle\int_0^n}\displaystyle \theta(\xb)=\exp\Bigl\{\xi_0+\sum_{m=N+1}^{M+N}\xi_{m}\,x_m\Bigr\}
+\end{cases}
+\end{equation}
+where
+
+\begin{itemize}
+\item $\gamma_{0}$ is the logarithm of the constant
+  scale parameter,
+\item the $\gamma_{k}$'s ($k\in\{1,\ldots,N\}$) are the
+  coefficients corresponding to the variables modelled with a
+  proportional effect,
+\item the $\gamma_{k}$'s ($k\in\{N+1,\ldots,M+N\}$) are the coefficients
+  corresponding to the non-time dependent part of the
+  effect of the variables modelled with a time-dependent effect,
+\item $\xi_{0}$ is  the logarithm of the constant shape parameter,
+\item the $\xi_{m}$'s ($m\in\{N+1,\ldots,M+N\}$) are the coefficients corresponding to
+  the time-dependent part of the effect of the variables modelled with
+  a time-dependent effect.
+\end{itemize}
+
+
+For the piecewise constant- and spline-based models, the
+user is free to choose the number of knots and specify
+their locations. The time-dependent effects of covariates are
+parametrised as interaction terms between the covariates and the
+baseline hazard, thus leading to the same functional form for the
+time-dependent effect than the one used for the baseline hazard. So
+for example, if the baseline hazard is modelled using a quadratic
+B-spline with one knot at 1 year, then the time-dependent effect of a
+covariate will be parametrised using a quadratic B-spline with one
+knot at 1 year.
+
+With the same conventions as for the Weibull model, the general
+expression of the hazard is now:
+
+\begin{equation}
+  \label{eq:18}
+  \widetilde{\lambda}(t,\xb)=\exp\Bigl\{\underbrace{\gamma_{0}+\sum_{k=1}^{M+N}\gamma_{k}\,
+    x_k}_{\textrm{Time-fixed part}}+\underbrace{\sum_{l=1}^L\Bigl(\xi_{l0}+\sum_{m=N+1}^{M+N}\xi_{lm}\,
+  x_m\Bigr)\mathrm{FT}_l(t)}_{\textrm{Time-dependent part}}\Bigr\}
+\end{equation}
+where
+
+\begin{itemize}
+\item $\mathrm{FT}_l$ are the basis functions of time used to describe
+  the baseline hazard and the time-dependent effects
+  of covariates. In
+  practice, \pkg{mexhaz} allows the use of i) B-splines of degree 1
+  to 3 (in which case $L$ is the sum of the degree of the spline and
+  of the number of interior knots), ii) restricted cubic B-splines (in
+  which case $L$ is equal to 1 plus the number of interior knots), and
+  iii) piecewise constant functions, in which case $L$ is equal to 1
+  plus the number of interior knots;
+\item $\gamma_{0}$ is the coefficient corresponding to the constant
+  term (or 'intercept') of the model,
+\item the $\gamma_{k}$'s ($k\in\{1,\ldots,N\}$) are the
+  coefficients corresponding to the variables modelled with a
+  proportional effect,
+\item the $\gamma_{k}$'s ($k\in\{N+1,\ldots,M+N\}$) are the coefficients
+  corresponding to the non-time dependent part of the
+  effect of the variables modelled with a time-dependent effect,
+\item the $\xi_{l0}$'s are the coefficients corresponding to
+  the spline modelling the logarithm of the baseline hazard,
+\item the $\xi_{lm}$'s ($m>N$) are the coefficients corresponding to
+  the modelling of the time-dependent effect of the
+   variables (obtained by considering interaction
+  terms with the function used to model the baseline hazard).
+\end{itemize}
+
+For example, for a model in which the baseline hazard is described
+with a quadratic B-spline with two knots (i.e., requiring four basis
+functions, named here $\mathrm{BS}_1,\ldots,\mathrm{BS}_4$, in
+addition to the intercept), with the variable $x_1$ modelled with a
+proportional (i.e, constant in time) effect, and the variable $x_2$
+modelled with a time-dependent effect, Equation~\ref{eq:18} becomes:
+
+\begin{eqnarray}
+  \label{eq:19}
+\nonumber  \widetilde{\lambda}(t,x_1,x_2)&=&\exp\Bigl\{\gamma_{0}+\gamma_{1}
+    x_1 + \gamma_2
+    x_2+\sum_{l=1}^4\xi_{l0}\,\mathrm{BS}_l(t)+x_2\sum_{l=1}^4\xi_{l2}\,\mathrm{BS}_l(t)\Bigr\}\\
+&=&  \underbrace{\exp\Bigl\{\gamma_{0}+\sum_{l=1}^4\xi_{l0}\,\mathrm{BS}_l(t)\Bigr\}}_{\lambda_0(t)}\exp\Bigl\{\gamma_{1}
+    x_1 +
+    \underbrace{\bigl(\gamma_2+\sum_{l=1}^4\xi_{l2}\,\mathrm{BS}_l(t)\bigr)}_{f(t)} x_2\Bigr\}
+\end{eqnarray}
+
+That is, the hazard can be expressed in the form:
+\begin{equation}
+  \label{eq:20}
+   \widetilde{\lambda}(t,x_1,x_2)=\lambda_0(t)\exp\bigl(\gamma_1 x_1+f(t) x_2\bigr)
+\end{equation}
+with the restriction that $f$ be based on the same basis functions of time as the ones
+used to model the logarithm of the baseline hazard.
+
+\subsubsection{Calculation of the cumulative hazard}
+\label{Gaussleg}
+
+Computation of the log-likelihood requires the calculation of the
+cumulative hazard (see Equations~\ref{eq:6}, \ref{eq:10} or \ref{eq:14}).
+Depending on the choice of function used to describe the hazard,
+the \code{mexhaz()} function computes the cumulative hazard in different ways:
+\begin{itemize}
+\item for the Weibull model, or when the logarithm of the hazard is
+  described by a piecewise constant function or a B-spline of degree
+  1, the calculation is based on the analytical formula for the
+  cumulative hazard;
+\item when the log-hazard is described by a quadratic or cubic B-spline or by
+  a restricted cubic spline, the cumulative hazard is obtained by
+  numerical integration, more precisely by Gauss-Legendre quadrature.
+\end{itemize}
+
+The Gauss-Legendre quadrature is a numerical integration technique
+which approximates the integral of a function defined on $[-1,1]$ by a
+weighted sum using $G$ pre-specified weights and nodes
+\citep{Mathews}. The $G$-point Gauss-Legendre rule is exact for
+polynomials functions of degree less or equal than $2G-1$. By applying
+a simple change of variable, the Gauss-Legendre quadrature rule can be
+used for approximating the integral of functions defined on the
+interval $[t_{0},t_{1}]$ according to the general formula:
+
+\begin{equation}
+  \label{eq:21}
+\int_{t_0}^{t_1}  \widetilde{\lambda}(u)\ud u \approx \frac{t_1-t_0}{2}\sum_{g=1}^G
+w_g \, \widetilde{\lambda}\Bigl(\frac{t_0+t_1}{2}+\frac{t_1-t_0}{2}\, z_g\Bigr)
+\end{equation}
+
+where $w_g$ and $z_g$ are the weights and nodes for the
+$G$-point GL rule, respectively. Those $G$ weights and nodes are
+available in the \pkg{statmod} \proglang{R} package.
+
+In the \code{mexhaz()} function, we apply the Gauss-Legendre
+quadrature rule on subintervals defined by the interior knots used to
+define the spline bases. More precisely, to integrate the hazard
+on $[t_0,t_1]$, supposing that this interval contains $K$ of the knots
+used to define the spline and renumbering for convenience these
+knots so that $k_0 = t_0, \ldots, k_{K+1} = t_1$, we write:
+
+\begin{equation}
+  \label{eq:22}
+\int_{t_0}^{t_1}  \widetilde{\lambda}(u)\ud u =
+\sum_{j=0}^{K}\int_{k_j}^{k_{j+1}} \widetilde{\lambda}(u)\ud u
+\end{equation}
+
+and apply the $G$-point Gauss-Legendre quadrature rule to each
+$\displaystyle\int_{k_j}^{k_{j+1}}  \widetilde{\lambda}(u)\ud u$. By default in
+\code{mexhaz()}, $G$ is set to 20.
+
+
+\subsubsection{Computation of the marginal cluster-specific
+likelihoods}
+
+The marginal likelihood $\mathrm{L}_i^M$ in
+Equation~\ref{eq:16} as well as the numerator and
+  denominator of Equation~\ref{eq:16b} do not have a closed analytical form. It is
+thus necessary to use numerical methods to approximate their value.
+
+The Gauss-Hermite quadrature is a numerical integration technique that
+allows the evaluation of integrals of the form:
+
+\begin{equation}
+  \label{eq:23}
+  \displaystyle\int_{-\infty}^{\infty}f(x)\,\exp\bigl(-x^2\bigr)\ud x
+\end{equation}
+
+by computing a weighted sum of the
+function $f$ evaluated at particular points called the quadrature
+nodes:
+
+\begin{equation}
+  \label{eq:24}
+  \displaystyle\int_{-\infty}^{\infty}f(x)\,\exp\bigl(-x^2\bigr)\ud x
+  \approx \sum_{q=1}^Q\rho^H_q\, f\bigl(x^H_q\bigr)
+\end{equation}
+
+The $Q$ nodes $x^H_q$ and weights $\rho^H_q$ are computed from the zeros of
+the $Q$-th order
+Hermite polynomial and in the context
+of our work, were obtained through the use of the R package
+\pkg{statmod} which makes use of an algorithm previously developed by \cite{Golub1969}.
+
+With a simple transformation of the weights and nodes, the same principle
+can be used to evaluate integrals of the form:
+
+\begin{equation}
+  \label{eq:25}
+  \displaystyle\int_{-\infty}^{\infty}f(x)\,\phi(x,\mu,\sigma)\ud x\approx \sum_{q=1}^Q\rho^N_q\, f\bigl(x^N_q(\mu,\sigma)\bigr)
+\end{equation}
+
+The transformed nodes, $x^N_q$, are now functions of $\mu$ and
+$\sigma$, respectively the mean and the standard deviation of the
+normal density function $\phi$. In particular, these nodes and weights do not
+depend on the function $f$ appearing in the integrand. This means that
+the positions of the nodes might not cover adequately the region of
+variation of the function resulting in i) a poor approximation of the
+integral and ii) the necessity of using a large number of
+nodes to try to improve that approximation.
+
+Note also that, by defining the function
+$g(x,\mu,\sigma)=f(x)\phi(x,\mu,\sigma)$, we can rewrite
+Equation~\ref{eq:25} as follows:
+
+\begin{equation}
+  \label{eq:26}
+  \displaystyle\int_{-\infty}^{\infty}g(x,\mu,\sigma)\ud x\approx \sum_{q=1}^Q\rho^*_q\, g\bigl(x^*_q,\mu,\sigma\bigr)
+\end{equation}
+with
+\begin{equation}
+  \label{eq:27}
+  \begin{cases}
+  \vphantom{\displaystyle\int_0^n}\displaystyle x_q^*(\mu,\sigma)=\mu+\sigma\sqrt{2}\, x^H_q\\
+  \vphantom{\displaystyle\int_0^n}\displaystyle \rho_q^*=\frac{1}{\sqrt{\pi}}\exp\bigl\{(x_q^H)^2\bigr\}\,\rho^H_q
+\end{cases}
+\end{equation}
+This last formulation is seldom presented but it makes the comparison
+with the adaptive Gauss-Hermite quadrature more straightforward.
+
+The idea of the adaptive Gauss-Hermite quadrature \citep{liu1994note,
+  Pinheiro1995} is to transform the integrand in order to obtain a new
+quadrature formula in which the nodes and corresponding weights depend
+on the function $f$: the nodes are translated and rescaled so that
+they cover the region where the integrand varies most, that is, around
+its mode. These specific nodes and weights depend on the location and
+the shape of the integrand of Equation~\ref{eq:16}, and are defined
+by using a Laplace approximation. More precisely, the adaptive
+Gauss-Hermite quadrature method requires, for each cluster, the
+computation of the mode of the integrand, $\mu_i$, and $\sigma_i$
+defined as the negative of the inverse of the second derivative of the
+logarithm of the integrand evaluated at $\mu_i$. These values are then
+used to transform the nodes and weights according to the following
+relationships:
+
+\begin{equation}
+  \label{eq:28}
+  \begin{cases}
+  \vphantom{\displaystyle\int_0^n}\displaystyle x_q^A(\mu_i,\sigma_i)=\mu_i+\sigma_i\sqrt{2}\, x^H_q\\
+  \vphantom{\displaystyle\int_0^n}\displaystyle \rho_q^A(\sigma_i)=\sigma_i\sqrt{2}\exp\bigl\{(x_q^H)^2\bigr\}\,\rho^H_q
+\end{cases}
+\end{equation}
+
+This transformation results in a much better approximation of the
+integral with a small number of quadrature points at the cost of extra
+computational time because of the evaluation of the cluster-specific
+$\mu_i$'s and $\sigma_i$'s, which requires calculations involving the
+first and second derivatives of the integrand.
+
+When applying Gauss-Hermite quadrature to the approximation of the
+cluster-specific marginal likelihood, we obtain:
+
+\begin{equation}
+\label{eq:29}
+\mathrm{L}_i^M(\bbt,\sigma) \approx \sum_{q=1}^Q\rho_q^{A}(\sigma_i)\,\mathrm{L}_i^C\bigl(\bbt,\sigma|x_q^{A}(\mu_i,\sigma_i)\bigr)\phi\bigl(x_q^{A}(\mu_i,\sigma_i),0,\sigma\bigr)
+\end{equation}
+
+In \pkg{mexhaz}, the cluster-specific
+$\mu_i$'s and $\sigma_i$'s are estimated at each iteration of the
+optimisation algorithm, and by default, the number of quadrature points $Q$ is set to 10.
+
+\subsubsection{Optimisation procedure}
+
+Once the full log-likelihood according to the context of the study
+(overall or excess mortality hazard, with or without a
+hierarchical structure) has been defined (as in
+Equations~\ref{eq:6}, \ref{eq:10}, or
+\ref{eq:17}), the \code{nlm} function is used by default in
+\pkg{mexhaz} to estimate the parameters
+$\widehat{\bth}=(\widehat{\bbt}^\top,\widehat{\sigma})^\top$. However,
+the user can alternatively choose
+the \code{optim} function, with all the different optimisation
+algorithms proposed. The estimated covariance matrix, $\widehat{\Sigma}_{\bth}$, is obtained as the inverse
+of the negative of the Hessian matrix, the standard errors of the
+parameters being the square root of the diagonal elements.
+
+Because the Hessian matrix returned by the optimization algorithm
+might not be very accurate, the user can ask for a better
+approximation via the \code{numHess=TRUE} option of the
+\code{mexhaz()} function. In that case, the Hessian is evaluated
+through the function \code{hessian()} from the \pkg{numDeriv}
+\proglang{R} package
+(numerical derivation based on the Richardson method).
+
+\subsubsection{Shrinkage estimates}
+The cluster-specific random effects, commonly called 'shrinkage
+estimates' or 'empirical Bayes estimates', can be obtained as the
+modes of the integrand appearing in Equation~\ref{eq:16} evaluated at the
+maximum likelihood value of the parameters:
+\begin{equation}
+  \label{eq:30}
+  \mu_i=\frac{1}{\widehat{\sigma}\sqrt{2\pi}}\mathrm{argmax}_{w}\Bigl(\mathrm{L}_i^C(\widehat{\bbt}|w)\,\exp\Bigl\{-\frac{w^2}{2\widehat{\sigma}^2}\Bigr\}\Bigr)
+\end{equation}
+
+An approximate variance for these shrinkage estimates is obtained by
+the following formula \citep{Booth1998}:
+\begin{equation}
+  \label{eq:31}
+  \mathrm{Var}\bigl(\mu_i\bigr)\approx\sigma_i^2+\Bigl(\frac{\partial\mu_i}{\partial\bth}(\widehat{\bth})\Bigr)^\top\,\widehat{\Sigma}_{\bth}\,\Bigl(\frac{\partial\mu_i}{\partial\bth}(\widehat{\bth})\Bigr)
+\end{equation}
+where $\sigma_i$ is the inverse of minus the second derivative of the logarithm of
+the integrand appearing in Equation~\ref{eq:16} evaluated at
+$\mu_i$ and
+$\Bigl(\frac{\partial\mu_i}{\partial\bth}(\widehat{\bth})\Bigr)$
+is the gradient of $\mu_i$, i.e., the vector of partial
+derivatives of $\mu_i$ relative to the model parameters, evaluated
+at the maximum likelihood value of these parameters.
+
+The approximate covariances between $\mu_i$ and the fixed effect
+parameters $\bbt$ are given by:
+\begin{equation}
+  \label{eq:32}
+  \mathrm{Cov}\bigl(\mu_i,\bbt\bigr)\approx\Bigl(\frac{\partial\mu_i}{\partial\bbt}(\widehat{\bbt})\Bigr)^\top\,\widehat{\Sigma}_{\bbt}
+\end{equation}
+
+And the approximate covariance between two cluster-specific random
+effects $\mu_i$ and $\mu_j$ is given by:
+\begin{equation}
+  \label{eq:33}
+  \mathrm{Cov}\bigl(\mu_i,\mu_j\bigr)\approx\Bigl(\frac{\partial\mu_i}{\partial\bth}(\widehat{\bth})\Bigr)^\top\,\widehat{\Sigma}_{\bth}\,\Bigl(\frac{\partial\mu_j}{\partial\bth}(\widehat{\bth})\Bigr)
+\end{equation}
+
+\subsubsection{Predictions and confidence intervals}
+
+In \pkg{mexhaz}, we provide tools to predict and plot the modelled
+hazard and the corresponding survival. In particular, in the excess
+hazard setting, these will correspond to the excess hazard and net
+survival if the population mortality rate is specified, and to the
+overall hazard and the overall survival if this population mortality
+rate is omitted from the model specification. To derive the
+corresponding confidence intervals, the user has the possibility to
+use either the Delta Method or a Monte-Carlo simulation-based
+method. For the Monte-Carlo method, the user can specify the number of
+simulations used.
+
+
+\section{Illustration}
+
+<<echo=FALSE>>=
+options(prompt = "R> ", continue = "+  ", width = 76, useFancyQuotes = FALSE)
+library("mexhaz")
+library("rstpm2")
+@
+
+\subsection{Introduction}
+
+The main function used for model fitting, \code{mexhaz()}, requires
+the following arguments:
+\begin{itemize}
+\item \code{formula}: a formula with the response on the
+  left of the \code{~} operator, and the linear predictor on the right. The response must be of
+the form \code{Surv(time, event)}, following the classical survival
+model formulation popularised by the R package \pkg{survival};
+\item \code{data}: the name of the dataset;
+\item \code{base}: the functional form that should be used to model the baseline
+hazard. Selection can be made between the following options:
+\code{"weibull"} for a Weibull hazard, \code{"exp.bs"} for a hazard
+described by the exponential of a B-spline (only B-splines of degree 1,
+2 or 3 are accepted), \code{"exp.ns"} for a hazard described by the
+exponential of a restricted cubic spline (also called 'natural
+spline'), \code{"pw.cst"} for a piecewise constant hazard;
+\item \code{degree}: specifies the degree of the B-spline;
+\item \code{knots}: if \code{base="exp.bs"} or \code{"exp.ns"}, \code{knots} is the vector of interior knots of
+the spline. If \code{base="pw.cst"}, \code{knots} is the vector
+defining the endpoints of the time intervals on which the hazard is
+assumed to be constant. By default, \code{knots=NULL} (that is, it
+produces a B-spline with no interior knots if \code{base="exp.bs"}, a
+linear B-spline with no interior knots if \code{base="exp.ns"}, or a
+constant hazard over the whole follow-up period if
+\code{base="pw.cst"});
+\item \code{expect}: name of the variable (from the dataset) defining
+  the expected hazard (for excess hazard model
+  estimation). By default \code{expect=NULL},
+    corresponding to a standard hazard regression model (which is a
+    model for the overall hazard);
+\item \code{random}: name of the variable defining the cluster
+  membership (for mixed effect hazard model
+  estimation). By default \code{random=NULL},
+    corresponding to a fixed effect survival model.
+\end{itemize}
+The reader is referred to the help page of the function for more
+details on the arguments of \code{mexhaz()}.
+
+~
+
+Two simulated datasets \citep{Charvat2016} provided as part of our
+package are used in this section in order to illustrate the various
+functionalities of the \code{mexhaz()} function.
+
+The \code{simdatn1} dataset has 4000 rows and 8 columns and contains the following variables:
+\begin{itemize}
+\item \code{age}: Age at diagnosis (continuous);
+\item \code{agecr}: Centred and rescaled age variable corresponding to
+  (age-70)/100;
+\item \code{depindex}: Deprivation index (continuous) defined at the
+  cluster level;
+\item \code{IsexH}: Gender (0 = Female, 1 = Male);
+\item \code{clust}: ID number of the cluster;
+\item \code{vstat}: Vital status (0 = Censored, 1 = Dead);
+\item \code{timesurv}: Follow-up time (year), administratively
+  censored after 10 years;
+\item \code{popmrate}: Population (expected) mortality rate at the
+        time of censoring or death. This was based on French
+        population mortality tables depending on sex, age and calendar year.
+\end{itemize}
+
+The \code{simdatn2} dataset has the same structure and contains the
+same variables but data have been generated so that gender has a
+time-dependent effect.
+
+For convenience, we define a new variable named \code{agec},
+corresponding to the age centred around 70 years.
+
+<<>>=
+data("simdatn1", package="mexhaz")
+data("simdatn2", package="mexhaz")
+simdatn1$agec <- simdatn1$age-70
+simdatn2$agec <- simdatn2$age-70
+head(simdatn1,3)
+head(simdatn2,3)
+@
+
+\subsection{Flexible hazard-based regression models}
+
+\subsubsection{Model fitting}
+
+Using the simulated dataset \code{simdatn1}, we show how to fit four
+models in which the overall mortality (i.e., without taking
+account of the population mortality rate) is described as a function
+of age at diagnosis (\code{agecr}) and gender (\code{IsexH}). The
+effect of these variables is assumed to be proportional
+(i.e., constant over time) but the baseline hazard is
+described by a different function in each model: Weibull hazard;
+piecewise-constant hazard with knots at 1, 2, 4, 6 and 8 years of
+follow-up; hazard described by the exponential of a cubic B-spline
+with knots at 1 and 5 years; and hazard described by the exponential
+of a restricted B-spline with knots at 1 and 5 years (in that case,
+the B-spline is constrained to be linear before 0 and after 10, which
+corresponds to the default boundary knots defined as 0 and the maximum
+of the observed follow-up times).
+
+For convenience, we first define the model formula:
+<<results=hide>>=
+Form1 <- Surv(time=timesurv, event=vstat) ~ agec + IsexH
+@
+
+And then fit the four models described above:
+<<results=hide>>=
+ModWb <- mexhaz(formula=Form1, data=simdatn1, base="weibull")
+ModPw <- mexhaz(formula=Form1, data= simdatn1, base="pw.cst",
+                knots=c(1,2,4,6,8))
+ModBs <- mexhaz(formula=Form1, data=simdatn1, base="exp.bs",
+                degree=3, knots=c(1,5))
+ModNs <- mexhaz(formula=Form1, data=simdatn1, base="exp.ns",
+                knots=c(1,5))
+@
+
+We obtain the following results:
+<<echo=FALSE>>=
+res <- t(sapply(list(ModWb, ModPw, ModNs, ModBs),
+                function(x) {round(rbind(x$coeff[c("agec")], x$coeff[c("IsexH")],
+                             x$loglik, x$n.par, -2*x$loglik+2*x$n.par),3)}))
+
+res <- as.data.frame(res)
+rownames(res) <- c("Weibull", "Piecewise Cst", "Restricted Spline", "B-Spline")
+colnames(res) <- c("agec", "IsexH", "-2*log-lik", "N Param", "AIC")
+res
+@
+
+Not surprisingly, the model which provides the best fit (according to
+the Akaike Information Criterion) is the Weibull
+model as the data were simulated using a Weibull hazard. Among the
+three other models, we note that the model in which the baseline
+hazard is described by the exponential of a cubic B-spline with two
+interior knots also provides a good fit. The question of how to choose
+adequately the number and position of knots of spline functions is
+still open: the most frequently used methods consist in i)
+choosing the knots based on prior knowledge of the data-generating
+mechanism, or ii) determining the knots as the predefined
+percentiles of the distribution of the survival times of individuals
+who presented the event \citep{Charvat2016}. From an empirical point
+of view, the fit can also be checked a posteriori by comparing the
+average of the predicted survival curves in the study population with
+a non-parametric estimator of survival (or net survival in the excess
+hazard setting).
+
+\subsubsection{Prediction}
+
+The output of the \code{mexhaz()} function is an object of class
+\code{mexhaz}. A \code{predict} method is defined for objects of class
+\code{mexhaz}: it allows the computation of hazard and survival
+estimates for a given time and a given vector of covariate values
+(see the help page of \code{predict.mexhaz()} for more details). More
+precisely, we can use \code{predict.mexhaz()} to predict both the
+survival and the corresponding hazard for i) several
+individuals with specific set of covariates at one pre-specified time,
+or ii) at several time points for one individual.
+
+We illustrate these possibilities using the previously fitted models.
+The object \code{P.bs.10} corresponds to the prediction at 10 years
+(argument \code{time.pts}) for both female and male aged 70 years at
+diagnosis (\code{IsexH=c(0,1)} and \code{agec=0}).
+
+<<>>=
+MyTime <- seq(0,10,le=1001)
+MyData <- data.frame(agec=0, IsexH=c(0,1))
+
+P.bs.10 <- predict(ModBs, time.pts=10, data.val=MyData)
+round(P.bs.10$results,3)
+@
+
+The objects \code{P.bs0} and \code{P.bs1} correspond to predictions
+from \code{ModBs} for female (\code{Isex=0}) and male (\code{Isex=1})
+aged 70 years at diagnosis from 0 to 10 years by increments of 0.01
+years. They are used in the following section for graphical
+representation purposes.
+
+<<>>=
+P.bs0 <- predict(ModBs, time.pts=MyTime, data.val=MyData[1,])
+P.bs1 <- predict(ModBs, time.pts=MyTime, data.val=MyData[2,])
+@
+
+By default, the confidence intervals are based on the Delta method,
+assuming the normality of the logarithm of the cumulative hazard. The
+function \code{predict.mexhaz()} allows the user to get the components
+of the gradient of the logarithm of the hazard and cumulative hazard
+through the \code{include.gradient=TRUE} argument. This might be
+useful for example if one is interested in estimating the confidence
+interval for a weighted sum of individual-specific survival curves.
+
+
+\subsubsection{Graphical results}
+
+The output of \code{predict.mexhaz()} is an object of class
+\code{predMexhaz} that can be used by the functions
+\code{plot.predMexhaz()}, \code{lines.predMexhaz()} and \code{points.predMexhaz()} to plot the
+hazard and survival functions. By default, confidence intervals are
+also plotted (if present in the \code{predMexhaz} object). The following examples (corresponding to the graphical
+representation of the hazard and survival curves for men and women
+aged 70 based on the previously fitted models, see
+Figure~\ref{JSS-HazandSurv0}), show how some of the standard
+arguments of the plotting functions can be
+used (see the help page of the package functions for more details).
+
+<<results=hide>>=
+plot(P.bs1, which="hazard", ylim=c(0,1.5), lwd=2.5, col="blue",
+main="Mortality hazard")
+lines(P.bs0, which="hazard", lwd=2.5, col="red")
+
+plot(P.bs1, which="surv", ylim=c(0,1), lwd=2.5, col="blue",
+main="Overall survival")
+lines(P.bs0, which="surv", lwd=2.5, col="red")
+@
+
+<<label=HazandSurv0, echo=FALSE, fig=T, include=FALSE, width=9.7, height=5.6>>=
+par(mfrow=c(1,2), cex.lab=1.4, cex.axis=1.4, cex.main=1.4, xaxs="i", yaxs="i")
+
+plot(NULL, xlim=c(0,10), ylim=c(0,1.5), xlab="Time", ylab="Hazard", main="Mortality hazard")
+eval(parse(text="grid(lwd=2); abline(v=c(0,10),h=c(0,1.5))"))
+
+lines(P.bs1, which="hazard", lwd=3, col="blue")
+lines(P.bs0, which="hazard", lwd=3, col="red")
+legend("topright",inset=0.01, c("Men", "Women"),
+lwd=3, col=c("blue","red"), lty=c(1,1), cex=1.4, bg="white")
+
+plot(NULL, xlim=c(0,10), ylim=c(0,1), xlab="Time", ylab="Survival", main="Overall survival")
+eval(parse(text="grid(lwd=2); abline(v=c(0,10),h=c(0,1))"))
+
+lines(P.bs1, which="surv", lwd=3, col="blue")
+lines(P.bs0, which="surv", lwd=3, col="red")
+
+@
+
+\begin{figure}[!htb]
+\begin{center}
+\includegraphics[width=0.85\textwidth]{JSS-HazandSurv0}
+\end{center}
+\caption{Mortality hazard and corresponding survival estimated for men
+and women aged 70.}
+\label{JSS-HazandSurv0}
+\end{figure}
+
+In Figure~\ref{JSS-HazandSurv}, we represent the hazard and survival
+functions for women aged 70 years based on three of the previously
+fitted models. We can see that, although the
+hazards seem different, the survival estimates (as well as their
+confidence intervals, not shown here) are very similar.
+
+<<label=HazandSurv, echo=FALSE, fig=T, include=FALSE, width=9.7, height=5.6>>=
+P.pw0 <- predict(ModPw, time.pts=MyTime, data.val=MyData[1,])
+P.ns0 <- predict(ModNs, time.pts=MyTime, data.val=MyData[1,])
+
+par(mfrow=c(1,2), cex.lab=1.4, cex.axis=1.4, cex.main=1.4, xaxs="i", yaxs="i")
+
+plot(NULL, xlim=c(0,10), ylim=c(0,0.7), xlab="Time", ylab="Hazard", main="Mortality hazard")
+eval(parse(text="grid(lwd=2); abline(v=c(0,10),h=c(0,0.7))"))
+lines(P.bs0, which="hazard", lwd=3, conf.int=FALSE)
+lines(P.ns0, which="hazard", conf.int=FALSE, lwd=3, lty.pe=2)
+lines(P.pw0, which="hazard", conf.int=FALSE, lwd=3, lty.pe=6)
+legend("topright",inset=0.01, cex=1,
+       lty = c(1, 2, 6), lwd = 3, bg="white",
+       c("B-spline", "Natural spline", "Piecewise constant"),seg.len=3)
+
+plot(NULL, xlim=c(0,10), ylim=c(0,1), xlab="Time", ylab="Survival", main="Overall survival")
+eval(parse(text="grid(lwd=2); abline(v=c(0,10),h=c(0,1))"))
+lines(P.bs0, which="surv", lwd=3, lty.pe=1, main="Overall survival", conf.int=FALSE)
+lines(P.ns0, which="surv", conf.int=FALSE, lwd=3, lty.pe=2)
+lines(P.pw0, which="surv", conf.int=FALSE, lwd=3, lty.pe=6)
+
+@
+
+\begin{figure}[!htb]
+\begin{center}
+\includegraphics[width=0.85\textwidth]{JSS-HazandSurv}
+\end{center}
+\caption{Mortality hazard and corresponding survival estimated by
+  three different models.}
+\label{JSS-HazandSurv}
+\end{figure}
+
+
+\subsubsection{Time-dependent effect}
+
+One of most commonly used assumption in survival analysis, mainly due
+to the popularity of the Cox model, is the proportionality of the
+hazards obtained for different values of the covariates. In other terms, the
+effects of the covariates, measured by the hazard ratio, is assumed
+to be constant over time, and the hazard for a specific value of a
+covariate is obtained by multiplying the baseline hazard by this
+constant. Although this assumption makes sense in many situations and
+greatly simplifies the estimation and interpretation of hazard-based survival
+models, there is sometimes no reason to think that the effect of a
+covariate should be constant over time.
+
+The modelisation of non-proportional effects of covariates is
+possible with the \code{mexhaz()} function, through the use of the
+\code{nph()} option in the model formula, and a graphical example is shown
+in Figure~\ref{JSS-HazTD}. In the current state of
+development of the package, non-proportional effects are modelled as
+interaction terms between the covariates and the baseline hazard. It
+is planned in future versions to allow for more flexibility through
+the specification of different time functions for each non-proportional effect.
+
+
+<<echo=FALSE, results=hide>>=
+ModBs2 <- mexhaz(Surv(time=timesurv, event=vstat) ~ agec + IsexH,
+                 data=simdatn2, base="exp.bs", degree=2,
+                 knots=c(1,5))
+@
+
+<<results=hide>>=
+ModBs2.Nph <- mexhaz(Surv(time=timesurv, event=vstat)~ agec + IsexH +
+nph(IsexH), data=simdatn2, base="exp.bs",
+degree=2, knots=c(1,5))
+@
+
+<<echo=FALSE, results=hide>>=
+
+ll1 <- ModBs2$loglik
+ll2 <- ModBs2.Nph$loglik
+np1 <- ModBs2$n.par
+np2 <- ModBs2.Nph$n.par
+Test <- 1-pchisq(2*(ll2-ll1),df=np2-np1)
+Test
+
+P.Bs2N.W <- predict(ModBs2.Nph, time.pts=MyTime,
+                    data.val=MyData[1,], include.gradient=TRUE)
+P.Bs2N.M <- predict(ModBs2.Nph, time.pts=MyTime,
+                    data.val=MyData[2,], include.gradient=TRUE)
+
+LogHR <- log(P.Bs2N.M$results$hazard) - log(P.Bs2N.W$results$hazard)
+
+Grad.LogHR <- P.Bs2N.M$grad.loghaz - P.Bs2N.W$grad.loghaz
+Var.LogHR <- diag(Grad.LogHR%*%ModBs2.Nph$vcov%*%t(Grad.LogHR))
+HR <- exp(LogHR)
+HR.Inf <- exp(LogHR+qnorm(0.025)*sqrt(Var.LogHR))
+HR.Sup <- exp(LogHR+qnorm(0.975)*sqrt(Var.LogHR))
+@
+
+<<label=HazTD, echo=FALSE, fig=T, include=FALSE, width=9.7, height=5.6>>=
+par(mfrow=c(1,2),cex.lab=1.4, cex.axis=1.4, cex.main=1.4, xaxs="i", yaxs="i")
+
+plot(NULL, xlim=c(0,10), ylim=c(0,1), xlab="Time", ylab="Hazard", main="Predicted hazard at age 70")
+eval(parse(text="grid(lwd=2); abline(v=c(0,10),h=c(0,1))"))
+lines(P.Bs2N.M, which="hazard", ylim=c(0,0.8), lwd=3, col="blue")
+lines(P.Bs2N.W, which="hazard", lwd=3, col="red")
+legend("topleft",inset=0.01, c("Men", "Women"),
+       lwd=3, col=c("blue","red"), lty=c(1,1), cex=1.4, bg="white")
+
+plot(NULL, xlim=c(0,10), ylim=c(0,2.1), xlab="Time", ylab="Hazard ratio", main="Hazard ratio Men/Women")
+eval(parse(text="grid(lwd=2); abline(v=c(0,10),h=c(0,2.1))"))
+lines(P.Bs2N.M$results$time.pts, HR, lwd=3, type="l")
+lines(P.Bs2N.M$results$time.pts, HR.Inf, type="l", lwd=2, lty="dashed")
+lines(P.Bs2N.M$results$time.pts, HR.Sup, type="l", lwd=2, lty="dashed")
+
+@
+
+\begin{figure}[!htb]
+\begin{center}
+\includegraphics[width=0.85\textwidth]{JSS-HazTD}
+\end{center}
+\caption{Example of time-dependent effect of gender.}
+\label{JSS-HazTD}
+\end{figure}
+
+\subsubsection{Note on the modelling of non-linear effects of variables}
+For the purpose of illutrating the general syntax of the
+\code{mexhaz()} function, in this section and the following, we have
+modelled the effect of the continuous variable \code{agec} as linear
+(on the logarithm of the hazard). In real application, care should of
+course be taken about how to model the effect of such a variable by
+introducing, if necessary, non-linear terms. This can be done, as with
+most other \proglang{R} functions for regression models, by either i)
+creating new variables in the dataset corresponding to non-linear
+functions of the variable of interest, ii) using the \code{I()}
+operator within the model formula to generate these variables directly
+during model fitting, or iii) using functions such as \code{bs()} or
+\code{ns()} directly within the model formula.
+
+\subsection{Excess hazard regression model}
+
+\subsubsection{General syntax}
+
+As we saw previously, the excess hazard regression
+approach to net survival estimation requires only the knowledge of the
+population mortality rate at the end of follow-up for each individual (in
+order to specify the likelihood). This is in contrast with
+non-parametric methods (such as the Pohar-Perme estimator) that
+require information on the population hazard at each event time.
+
+As a consequence, unlike functions implementing non-parametric methods
+(such as the \code{rs.surv()} function from the \pkg{relsurv} package)
+for which the full lifetable has to be provided in the form of a \code{ratetable}
+object, the \code{mexhaz()} function only requires an extra variable
+(which has to be included in the dataset) corresponding to the population
+mortality rate at the end of follow-up.
+
+The syntax for fitting an excess mortality hazard model with the \code{mexhaz()}
+function is thus simply obtained by specifying the name of the dataset
+variable containing the expected mortality rate through the
+\code{expected} argument:
+
+<<results=hide>>=
+ModBsExc <- mexhaz(Surv(timesurv, vstat) ~ agec + IsexH +
+nph(IsexH), data=simdatn1, base="exp.bs",
+degree=3, knots=c(1,5), expected="popmrate")
+@
+
+<<>>=
+summary(ModBsExc)
+@
+
+The parameter estimates now pertains
+to the effect of the covariates on the excess mortality hazard that patients are
+subject to because of their disease: from these parameters, excess hazard ratios can be calculated.
+
+\subsubsection{A note on the population mortality rate variable}
+In the previous example, the population mortality rate
+  variable \code{popmrate} was already provided as part of the example
+dataset. However, it is usually necessary to create this variable from
+population mortality tables. We show here how this can be done using
+data from the \pkg{rstpm2} package, namely the \code{colon}
+dataset that contains 15,564 observations on colon cancer
+patients, and the \code{popmort} dataset that provides
+the corresponding population mortality rates.
+
+<<>>=
+data("colon", package="rstpm2")
+data("popmort", package="rstpm2")
+
+head(colon, 3)
+head(popmort, 3)
+@
+
+The general principle is to compute from the available variables the
+age and year reached at the end of follow-up for each individual and
+then retrieve from the mortality table the value of the mortality rate
+corresponding to each individual-specific sex, age at exit and year at
+exit. It should be noted that the variables available (e.g., complete
+birth date versus age given as an integer) and the extension of the
+lifetables (e.g., ages are available until 99 years whereas some
+individuals in the dataset are 100 years or older at the end of
+follow-up) might introduce some differences in the selection of the
+appropriate mortality rate. For example, for an individual diagnosed
+in December 2015 at age 40 years and 8 months and censored after 6
+months (i.e., in May 2016 at age 41 years and 2 months), the correct
+population mortality rate at end of follow-up corresponds to the
+mortality rate for year 2016 and age 41. However, if age and year of
+diagnosis are only available as integer (i.e., the diagnosis is made
+in 2015 at age 40), we can only compute an approximate age at exit of
+40.5 years and a year at exit of 2015.5, which in terms of attained
+age and year at exit, corresponds to 40 years and 2015, thus leading
+to the selection of a different population mortality rate.
+
+Because our objective here is not to enter these technical details, we
+will use the syntax provided in the vignette of the \pkg{rstpm2}
+package without questioning the choices made in terms of calculation
+of time periods.
+
+The following lines of code create a new dataset \code{colon2}
+containing amongst others the variables \code{exitage} and \code{exityear}
+(respectively, age and calendar year at the end of follow-up), as
+well as \code{sex}, that will be used to get the appropriate mortality rate.
+<<>>=
+colon2 <- within(rstpm2::colon, {
+    status <- ifelse(surv_mm > 120.5, 1, status)
+    tm <- pmin(surv_mm, 120.5)/12
+    exit <- dx + tm*365.25
+    sex <- as.numeric(sex)
+    exitage <- pmin(floor(age + tm), 99)
+    exityear <- floor(yydx + tm)
+})
+@
+
+Now, we can create the variable \code{rate} by
+merging \code{colon2} with \code{popmort}:
+
+<<>>=
+colon2 <- merge(colon2, popmort, by.x=c("sex", "exitage", "exityear"),
+                by.y=c("sex", "age", "year"))
+
+head(colon2[, c("sex", "age", "stage", "status",
+                "exitage", "exityear", "tm", "rate")], 3)
+@
+
+This dataset will be used later to compare \code{mexhaz()} to
+functions for excess hazard estimation from other packages.
+
+Note that population lifetables for many countries can be
+accessed through the Human Mortality Database website
+(\url{http://www.mortality.org/}). In general, the mortality rate is
+expressed in number of events per person-year: it might be rescaled
+(e.g., number of events per person-month) to match the time scale
+chosen in a particular application but there is no need to convert it to a specific scale, as is
+for example the case when using the \pkg{relsurv} package (all time
+variables having to be expressed in days).
+
+
+\subsection{Mixed-effect excess hazard regression model}
+
+In order to fit a (possibly, excess) hazard regression model with a
+random effect, the argument \code{random} is used to specify the name
+of the covariate defining the cluster. By default in \pkg{mexhaz},
+the number of nodes of adaptive Gauss-Hermite quadrature (AGHQ) is set
+to 10 but it can be modified through the argument \code{n.aghq}.
+
+<<echo=FALSE, results=hide>>=
+ModBsExc.1n <- mexhaz(Surv(timesurv, vstat) ~ agec + IsexH + nph(IsexH),
+                     data=simdatn1, base="exp.bs", degree=3, knots=c(1,5),
+                     n.aghq=1, expected="popmrate", random="clust")
+
+ModBsExc.5n <- mexhaz(Surv(timesurv, vstat) ~ agec + IsexH + nph(IsexH),
+                     data=simdatn1, base="exp.bs", degree=3, knots=c(1,5),
+                     n.aghq=5, expected="popmrate", random="clust")
+
+ModBsExc.10n <- mexhaz(Surv(timesurv, vstat) ~ agec + IsexH + nph(IsexH),
+                     data=simdatn1, base="exp.bs", degree=3, knots=c(1,5),
+                     n.aghq=10, expected="popmrate", random="clust")
+
+@
+
+Here are the results obtained when fitting a mixed-effect excess
+hazard model with 10 quadrature nodes:
+
+<<echo=FALSE>>=
+summary(ModBsExc.10n)
+@
+
+Using less quadrature points will decrease the time needed to compute
+the cluster-specific marginal likelihood but may result in a poor
+approximation of the total likelihood: this might in turn increase
+ time to convergence and sometimes even hamper the convergence of the model.
+
+<<echo=FALSE>>=
+res <- t(sapply(list(ModBsExc.1n, ModBsExc.5n, ModBsExc.10n),
+                function(x) {
+                  round( rbind(x$coeff[c("agec")] , exp(x$coeff[c("clust [log(sd)]")]),
+                        x$loglik, -2 * x$loglik +2 * x$n.par,
+                        x$time.elapsed, x$code), 3)} ))
+res <- as.data.frame(res)
+rownames(res) <- c("1Quad-P", "5Quad-P", "10Quad-P")
+colnames(res) <- c("agec","clust (sd)","log-lik", "AIC", "time (sec)", "nlm code")
+res
+@
+
+When a random effect model is fitted, the object returned by
+\code{mexhaz()} includes an estimate of the logarithm of the standard
+deviation of the random effect (\code{clust [log(sd)]}) in the \code{coefficients} slot and the
+predicted cluster-specific shrinkage factors can be found in the
+\code{mu.hat} slot. These shrinkage factors are used by the
+\code{predict.mexhaz()} function to calculate cluster-specific hazard
+and survival values. If no cluster name is given, predictions are made
+for the value 0 of random effect (but it should be reminded that
+hazard and survival predictions at the mean value of the random effect
+are different from the marginal hazard and survival values obtained by
+integrating over the
+distribution of the random effect).
+
+For example, the following lines of code show how to obtain the
+baseline excess hazard for men aged 70 in cluster 15:
+
+<<>>=
+PBsExcR.c15 <- predict(ModBsExc.10n, time.pts=MyTime,
+data.val=MyData[2,], cluster="15")
+@
+
+And for men aged 70 with the value 0 for the random effect:
+
+<<>>=
+PBsExcR.0 <- predict(ModBsExc.10n, time.pts=MyTime,
+data.val=MyData[2,])
+@
+
+\subsection{Convergence issues in practice}
+
+
+A common problem encountered by users of statistical package in the
+process of constructing a regression model is that of non convergence,
+i.e., the algorithm is not able to find the values of the
+parameters corresponding to the specified model. Although there might
+be structural reasons explaining why "the model does not converge"
+(such as non-identifiability or collinearity between covariates), we
+list here a few problems that can be encountered when using
+\code{mexhaz()} and that may be solved either by modifying some of the
+arguments of the function or by changing the parametrisation of the
+model.
+
+First of all, it is a fact that there is generally no algorithm that
+works for all optimisation problems. The \proglang{R} statistical software
+includes various optimisation algorithms, the most commonly used being
+\code{nlm()} and \code{optim()} (the latter allows the user to choose
+among several methods such as \code{Nelder-Mead} or \code{BFGS}). In
+order to take advantage of the availability of these different
+optimisation procedure, the \code{mexhaz()} function allows the user
+to choose between these options through the arguments \code{fnoptim}
+(which can take values \code{"nlm"} and \code{"optim"}). The
+\code{method} argument takes as possible values the names of the different
+methods available in \code{optim} (as there is only one method for
+\code{nlm}). Moreover, it is possible to add extra-arguments to
+\code{mexhaz()} to further customise the calls to \code{nlm} or
+\code{optim} (e.g., maximal number of iterations, gradient
+tolerance, etc.). Information on the convergence of the model is
+provided in the output of our function (slot \code{code}). It is
+worth noticing here that the value of \code{code} is the one returned
+by the optimisation method chosen by the user. Consequently,
+convergence is indicated by \code{code=1} when \code{nlm} (the
+default) is used and by \code{code=0} when \code{optim} is used.
+
+Among the frequent causes of non convergence is the choice of initial
+values. Indeed, the likelihood function might present local extrema or
+be almost flat in some regions of the parameter space so that
+depending on the initial values, the algorithm might find itself stuck
+in such an area. Sensitivity to initial values is more likely to
+happen when the complexity of the model increases: we showed for
+example that the mixed-effect excess mortality hazard models were
+sensitive to initial values \citep{Charvat2016}. In such cases, a
+common (and usually effective) practice is to fit a simple model first
+and use the estimated parameters (possibly rounded) as initial values
+for more complex models. Based on this practice, it appears
+that the convergence of mixed-effect excess hazard models can be
+greatly improved by first fitting a fixed-effect excess hazard model
+and then use the rounded estimated values as initial values (setting
+the initial value of the standard deviation of the random effect at a
+reasonably small positive value such as 0.5). Initial values are
+specified through the argument \code{init}.
+
+Another problem that one might be faced with is related to the
+numerical approximation of the likelihood. If this approximation is
+too crude, the algorithm might fail to locate the maximum of the
+likelihood function (or this maximum might not exist for the
+approximated likelihood). In mixed-effect hazard models fitted with
+the \code{mexhaz()} function, two possible causes of inadequate
+approximation of the likelihood function are i) the
+approximation of the cumulative hazard for each individual by
+Gauss-Legendre quadrature (when B-splines of degree 2 or 3, or
+restricted cubic splines, are used to
+model the logarithm of the baseline hazard) and ii) the
+approximation of the cluster-specific marginal likelilhood by adaptive
+Gauss-Hermite quadrature. The user can modify the number of
+Gauss-Legendre nodes (argument \code{n.gleg}) and of Gauss-Hermite
+nodes (argument \code{n.aghq}): increasing the number of nodes will
+allow better convergence of the models but will require more
+computational time (especially for the adaptive Gauss-Hermite quadrature).
+
+In the specific context of excess hazard models, convergence problems
+might also be encountered if the total hazard observed in the study
+population is lower than the expected hazard (obtained through
+population mortality tables). Indeed, the excess hazard
+should become negative, which is not permitted by its parameterisation
+(i.e., the excess hazard is constrained to be a positive
+function of time). In that very particular case, there is no other solution
+than to drop the expected hazard term and fit a model for the total hazard, as
+assuming an excess hazard on this population does not sound appropriate.
+
+The last problem we will mention in this section is related to the
+scale of the variables used in the model, whether it be i)
+the time scale or ii) the scale of the covariates used in the
+linear predictor.
+
+Concerning the time scale, it should be adapted to the
+event-generating mechanism: if only a few dozen cases happen each
+year, and time is expressed in days or months, the hazard rate will be
+very small. Consequently, a regression model based on such a
+time scale might fail to estimate correctly the hazard because
+optimisation algorithms might not be able to find a correct step size
+to reach the maximum likelihood value of the parameters. A simple
+solution to this problem is of course to rescale time so that the
+hazard is expressed on a meaningful scale: invariance of the
+likelihood function towards model reparametrisation insures that we
+are estimating the same model. One should notice that such problems are specific
+to parametric and flexible hazard models: with the semi-parametric Cox
+model, only the order of the events is used in the estimation
+procedure so that the time scale is of no importance.
+
+A similar problem occurs with covariates taking very large (age
+expressed in days, age squared, etc.) or very small values (e.g.,
+concentration of biomarkers expressed in g/L). Remembering that
+parameter estimates corresponds to a one unit increase of the variable
+of interest, it is easy to imagine that the effect of age expressed in
+days is likely to be very small in most applications. Consequently,
+the associated parameter will be very small and, as before, the
+optimisation algorithm might have problem to deal with parameters of
+widely different magnitude and find its way in the parameter space
+towards the maximum likelihood. Once again, a possible solution to
+this problem is to rescale the variables.
+
+\subsection[Model parameterisation in mexhaz]{Model parameterisation
+  in \pkg{mexhaz} compared to other packages}
+
+We focus here on the two main extensions proposed in our package,
+namely the possibility to include time-dependent effects and a random
+effect, in comparison with two existing tools proposed in \proglang{R}
+by default, \pkg{mgcv} \citep{mgcv} and \pkg{nlme} \citep{nlme-pkg}.
+In our model parameterisation (see equation~\ref{eq:18}), a
+time-dependent effect for a given covariate is defined as an
+interaction between the functional form defining the baseline hazard
+and that covariate. The user can specify that time-dependent effects are
+to be fitted by using the special term \code{nph()} in the model
+formula. The \code{nph()} term takes as argument the names of the
+covariates (separated by a plus operator) for which a time-dependent
+effect is assumed; because this time-dependent effect uses that same
+function of time as the baseline hazard, there is no need for further
+model specification. This is one difference with, for example, the
+smoother functions \code{s()} in the package \pkg{mgcv} where the user
+can specify a different degree and a different number of knots for
+each covariate. One planned extension of our package is to
+allow for different functions of time for each time-dependent effect.
+
+Regarding the inclusion of a random effect, we used a specific
+argument \code{random} which contains the name of the variable
+defining the cluster level within quotes, following the essence of
+\pkg{nlme}, even though the \code{mexhaz()} function does not require a
+formula syntax (because it currently allows only one random
+effect). It is planned to extend the \code{mexhaz()} function so that it allows
+for several random effects.
+
+\section{Discussion and conclusion}
+
+The \pkg{mexhaz} package combines different tools to model
+time-to-event data based on maximum likelihood theory, from flexible
+parametric models up to flexible parametric excess hazard model
+including a random effect to analyse clustered data. Its
+implementation is efficient, computationally robust and compares very
+well with different existing packages devoted to some of the
+implemented features. The spline functions are powerful tools to
+provide smooth estimates for either the baseline hazard or the
+time-dependent effect of covariates, such effects being particularly
+important in areas such as cancer epidemiology. Even if the
+\proglang{R} code provided in the examples use a single time-dependent
+effect, extension to multiple time-dependent effects is
+straightforward. One feature of the package that we have not
+detailed here is the fact that the output of the \code{mexhaz()} and
+\code{predict.mexhaz()} functions can be used to derive other
+survival-related indicators. For example, Kipourou et
+al. show an example of use of \pkg{mexhaz} to
+derive the (adjusted) cumulative incidence functions with their confidence
+intervals in a competing risk setting \citep{Kipourou}.
+
+We focused here on the free \proglang{R} software environment, but
+tools in \proglang{Stata} and \proglang{SAS} are also available for
+fitting (excess) hazard regression models with the possible inclusion
+of random effects. In \proglang{Stata}, the user-written commands
+\pkg{stpm2} \citep{lambert2009} and \pkg{strcs} \citep{bower2016} can be used to fit flexible models defined
+on the cumulative hazard scale (the Royston-Parmar model) or the
+log-hazard scale, respectively, for both the overall mortality hazard
+and the excess mortality hazard. The
+commands \pkg{streg} and \pkg{mestreg} allow the user to fit
+parametric mixed-effect survival model with either a gamma or a
+lognormally distributed frailty, respectively (the command
+\pkg{mestreg} being however not restricted to two-level mixed effect
+models), while \pkg{stcox} allows the user to fit Cox proportional
+hazard models with a shared gamma frailty through the option
+\code{shared()}. The user-written \pkg{stmixed} \citep{crowther2019}
+command provides a complementary programme for fitting multilevel
+parametric survival models defined on the cumulative hazard scale,
+with the possibility to perform excess hazard modelling. In
+\proglang{SAS}, the procedure \pkg{PHREG} includes a \code{RANDOM}
+statement for specifying a shared frailty, the \code{DIST} option
+allowing this frailty to be gamma or lognormally distributed. Besides,
+the SAS procedure \pkg{NLMIXED} is an extremely powerful tool for
+developing two-level random effect models and can be used to construct
+shared frailty hazard-based regression model, where one can assume
+either a parametric distribution for the time-to-event (such as
+Weibull \citep{liu2008, kong2010}) or different kinds of specification
+of the baseline hazard (such as piecewise constant \citep{dupont2013}
+or splines \citep{belot2014}).
+
+The current development of \pkg{mexhaz} allows the analysis of
+two-level hierarchical time-to-event data through the use of a random
+effect defined at the cluster level. Based on adaptive Gauss-Hermite
+quadrature, we showed that our approach provides reasonable estimates
+of the effects of the covariates defined either at the individual or
+cluster level, as long as enough clusters are present in the data (50
+or more) \citep{Charvat2016}.
+
+\section{Acknowledgement}
+
+We thank the IRESP (Institut de Recherche en Sant\'e Publique) for
+supporting the study (grant for the ANGEFLEX study, Convention
+AAR2013-13 'Soutien \`a la recherche statistique et math\'ematique
+appliqu\'ee \`a la canc\'erologie'). This work was also partly supported by
+Cancer Research UK grant number C7923/A18525.
+
+\bibliography{mexhazBiblio}
+
+\newpage
+\begin{table}
+  {\scriptsize
+\begin{center}
+\begin{tabularx}{\linewidth}{|X|X|X|X|X|X|X|}
+\hline\textbf{Package name} &\pkg{mexhaz}&\pkg{rstpm2}&\pkg{flexsurv}&\pkg{frailtypack}&\pkg{parfm}&\pkg{Survival}\\\hline
+\textbf{Function name}&\code{mexhaz}&\code{stpm2};
+\code{pstpm2}&{\tiny\code{flexsurvreg};
+  \code{flexsurvspline}}&\code{frailtyPenal}&\code{parfm}&\code{coxph};
+\code{survreg}\\\hline
+Parametric models&Exponential, Weibull&Weibull, generalized
+Gamma&Built-in or user-defined distributions&Exponential,
+Weibull&Exponential, Weibull, Gompertz, log-normal and
+log-logistic&Built-in or user-defined distributions\\\hline
+Flexible modelling of the (log-)hazard&Log-hazard scale: piecewise
+constant, B-splines (up to cubic), natural cubic splines&-&-&Hazard scale: penalized cubic M-splines&-&-\\\hline
+Flexible modelling of the log-cumulative hazard&-&Smoothed functions
+implemented in \proglang{R} (e.g., natural cubic splines)&Natural cubic splines&-&-&-\\\hline
+Position of spline knots&User-defined&Quantile of the event
+distribution; user-defined&Quantile of the event
+distribution; user-defined&Quantile of the event
+distribution; equispaced knots&-&-\\\hline
+Time-dependent effects&Yes&Yes&Yes&Yes&No&Yes\\\hline
+Shared fraity model for left-truncated data&Yes&No&No&Yes&Yes&No\\\hline
+Shared frailty distribution&log-normal&Gamma, log-normal&-&Gamma,
+log-normal&Gamma, log-normal, positive stable, inverse Gaussian&Gamma,
+log-normal, log-t\\\hline
+Excess hazard modelling&Yes&Yes&Yes&No&No&No\\\hline
+\multicolumn{7}{l}{\vphantom{$\displaystyle\sum^n$}{\bf Available outputs}}\\\hline
+Prediction of the hazard / survival function&Yes&Yes&Yes&Yes&No&Yes\\\hline
+Gradient of the predicted values&Yes&No&No&No&No&No\\\hline
+Empirical Bayes estimates&Yes&No&-&Yes (with their variance only for
+Gamma frailty)&Yes (but not their variance)&Yes\\\hline
+\end{tabularx}
+\end{center}}
+\caption{Comparison of the functionalities provided by \pkg{mexhaz}
+  and other \proglang{R} packages for hazard regression modelling with
+  excess hazard or shared frailty.}
+\label{tab:1}
+\end{table}
+
+\end{document}

@@ -9,6 +9,9 @@ extern SEXP DeltaNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP paramt, S
 extern SEXP DeltaWeibR(SEXP x, SEXP nph, SEXP fixobs, SEXP paramt, SEXP varcov, SEXP grad);
 extern SEXP FrailtyAdapt(SEXP nodes, SEXP nodessquare, SEXP logweights, SEXP clust, SEXP clustd, SEXP expect, SEXP betal, SEXP betaL, SEXP A, SEXP var, SEXP muhatcond);
 extern SEXP FrailtyAdaptL(SEXP nodes, SEXP nodessquare, SEXP logweights, SEXP clust, SEXP clustd, SEXP expect, SEXP betal, SEXP betaL0, SEXP betaL, SEXP A0, SEXP A, SEXP var, SEXP mh0, SEXP muhatcond);
+extern SEXP HazardWeibC(SEXP x0, SEXP x, SEXP nph, SEXP fixobs, SEXP param, SEXP paramf);
+extern SEXP HazardWeibL(SEXP x0, SEXP x, SEXP nph, SEXP fixobs, SEXP param, SEXP paramf);
+extern SEXP HazardWeibR(SEXP x, SEXP nph, SEXP fixobs, SEXP param, SEXP paramf);
 extern SEXP HazardBs0C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixobs, SEXP param, SEXP paramf, SEXP matk);
 extern SEXP HazardBs0L(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixobs, SEXP param, SEXP paramf, SEXP matk);
 extern SEXP HazardBs0R(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP paramf, SEXP matk);
@@ -30,6 +33,9 @@ const static R_CallMethodDef R_CallDef[] = {
     {"DeltaWeibR",   (DL_FUNC) &DeltaWeibR,    6},
     {"FrailtyAdapt", (DL_FUNC) &FrailtyAdapt, 11},
     {"FrailtyAdaptL",(DL_FUNC) &FrailtyAdaptL,14},
+    {"HazardWeibC",   (DL_FUNC) &HazardWeibC,  6},
+    {"HazardWeibL",   (DL_FUNC) &HazardWeibL,  6},
+    {"HazardWeibR",   (DL_FUNC) &HazardWeibR,  5},
     {"HazardBs0C",   (DL_FUNC) &HazardBs0C,    9},
     {"HazardBs0L",   (DL_FUNC) &HazardBs0L,    9},
     {"HazardBs0R",   (DL_FUNC) &HazardBs0R,    7},

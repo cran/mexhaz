@@ -78,7 +78,7 @@ SEXP DeltaWeibR(SEXP x, SEXP nph, SEXP fixobs, SEXP paramt, SEXP varcov, SEXP gr
     for (i=0; i<nnph; i++){
       TempH += ParamT[nfix+2+i]*Nph[i+t2];
     }
-    TempH = X[z]*exp(TempH); 
+    TempH = log(X[z])*exp(TempH); 
 
     MyGradLH[nfix+1] = 1 + TempH;
     MyGradLC[nfix+1] = TempH;

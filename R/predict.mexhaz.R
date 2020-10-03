@@ -106,50 +106,46 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
     FALCenv <- environment()
 
     if (base=="pw.cst"){
-        HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+        HazardInt <- function(x,nph,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
             .Call(C_HazardBs0R,x,nph,timecat,fixobs,param,paramf,as.double(matk))
         }
-        DeltaFct <- function(x0,x,nph,timecat0,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
+        DeltaFct <- function(x,nph,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
             .Call(C_DeltaBs0R,x,nph,timecat,fixobs,paramt,as.double(matk),as.double(varcov),grad)
         }
     }
     else if (base=="exp.bs" & degree==1){
-        HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+        HazardInt <- function(x,nph,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
             .Call(C_HazardBs1R,x,nph,timecat,fixobs,param,paramf,as.double(matk),as.double(totk))
         }
-        DeltaFct <- function(x0,x,nph,timecat0,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
+        DeltaFct <- function(x,nph,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
             .Call(C_DeltaBs1R,x,nph,timecat,fixobs,paramt,as.double(matk),as.double(totk),as.double(varcov),grad)
         }
     }
     else if (base=="exp.bs" & degree%in%c(2,3)){
-        HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+        HazardInt <- function(x,nph,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
             .Call(C_HazardBs23R,x,nph,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk))
         }
-        DeltaFct <- function(x0,x,nph,timecat0,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
+        DeltaFct <- function(x,nph,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
             .Call(C_DeltaBs23R,x,nph,timecat,fixobs,paramt,deg,n,lw,as.double(matk),as.double(totk),as.double(varcov),grad)
         }
     }
     else if (base=="exp.ns"){
-        HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+        HazardInt <- function(x,nph,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
             .Call(C_HazardNsR,x,nph,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk),as.double(intk),as.double(nsadj1),as.double(nsadj2))
         }
-        DeltaFct <- function(x0,x,nph,timecat0,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
+        DeltaFct <- function(x,nph,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
             .Call(C_DeltaNsR,x,nph,timecat,fixobs,paramt,deg,n,lw,as.double(matk),as.double(totk),as.double(intk),as.double(nsadj1),as.double(nsadj2),as.double(varcov),grad)
         }
     }
     else if (base=="weibull"){
-        HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
-            log.p.LT.1 <- paramf[1] + as.vector(fixobs%*%paramf[-1])
-            log.p.LT.2 <- param[1] + as.vector(nph%*%param[-1])
-            l.lambda.beta <- log.p.LT.2 + (exp(log.p.LT.2)-1)*x + log.p.LT.1
-            Lambda.beta <- exp(log.p.LT.1+exp(log.p.LT.2)*x)
-            Result <- list(LogHaz=l.lambda.beta, HazCum=Lambda.beta)
-            return(Result)
+        HazardInt <- function(x,nph,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+            .Call(C_HazardWeibR,x,nph,fixobs,param,paramf)
         }
-        DeltaFct <- function(x0,x,nph,timecat0,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
-            .Call(C_DeltaWeibR,x,t(nph),t(fixobs),paramt,varcov,grad)
+        DeltaFct <- function(x,nph,timecat,fixobs,paramt,deg,n,lw,matk,totk,intk,nsadj1,nsadj2,varcov,grad){
+            .Call(C_DeltaWeibR,x,nph,fixobs,paramt,varcov,grad)
         }
     }
+
     Surv <- NA
     lambda <- NA
     varcov <- NA
@@ -223,7 +219,6 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
     lglw <- log(gl$weights)
 
     # Formatting the data
-    time.new.0 <- NULL
     fix.new <- model.matrix(FormulaF,data=Test)
     names.fix <- colnames(fix.new)[-1]
     nph.new <- model.matrix(FormulaN,data=Test)
@@ -234,13 +229,12 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
 
     # Weibull hazard
     if (base=="weibull"){
-        time.cat.0 <- NULL
         time.cat <- NULL
         vec.knots <- NULL
         int.knots <- NULL
         MatK <- NULL
         NsAdj <- list(NULL,NULL)
-        time.new <- log(time.pts)
+        time.new <- time.pts
         n.td.base <- 1
         n.ntd <- dim(fix.new)[2]
         if (n.ntd>1){
@@ -272,7 +266,6 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
         cuts <- c(0,knots,max.time)
         time.cat.lab <- cut(time.pts,breaks=cuts,include.lowest=TRUE)
         time.cat <- as.numeric(time.cat.lab)-1
-        time.cat.0 <- NULL
 
         if (base=="pw.cst"){
             time.new <- time.pts-cuts[time.cat+1]
@@ -355,20 +348,20 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
             fix.new <- as.matrix(fix.new)
             which.ntd <- c(which.ntd,n.par)
         }
-
-        fix.new <- t(fix.new) # Matrix of prop effects has to be transposed for use by the Int/Delta functions
-        nph.new <- t(nph.new) # Matrix of time-dep effects has to be transposed for use by the Int/Delta functions
     }
 
+    fix.new <- t(fix.new) # Matrix of prop effects has to be transposed for use by the Int/Delta functions
+    nph.new <- t(nph.new) # Matrix of time-dep effects has to be transposed for use by the Int/Delta functions
+
     nb.par <- length(c(which.ntd,which.td))
-    temp.H <- HazardInt(x0=time.new.0,x=time.new,nph=nph.new,timecat0=time.cat.0,timecat=time.cat,fixobs=fix.new,param=coef[which.td],paramf=coef[which.ntd],deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]])
+    temp.H <- HazardInt(x=time.new,nph=nph.new,timecat=time.cat,fixobs=fix.new,param=coef[which.td],paramf=coef[which.ntd],deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]])
     lambda <- exp(temp.H$LogHaz)
     Surv <- exp(-temp.H$HazCum)
 
     # Variance and CI estimation
     if (conf.int=="delta"){
         varcov <- vcov[c(which.ntd,which.td),c(which.ntd,which.td),drop=FALSE]
-        temp.V <- DeltaFct(x0=time.new.0,x=time.new,nph=nph.new,timecat0=time.cat.0,timecat=time.cat,fixobs=fix.new,paramt=c(coef[which.ntd],coef[which.td]),deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]],varcov=varcov,as.numeric(include.gradient))
+        temp.V <- DeltaFct(x=time.new,nph=nph.new,timecat=time.cat,fixobs=fix.new,paramt=c(coef[which.ntd],coef[which.td]),deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]],varcov=varcov,as.numeric(include.gradient))
         Var.Log.Haz <- temp.V$VarLogHaz
         Var.Log.Cum <- temp.V$VarLogCum
         varcov <- varcov[order(c(which.ntd,which.td)),order(c(which.ntd,which.td)),drop=FALSE]
@@ -411,7 +404,7 @@ predict.mexhaz <- function(object,time.pts,data.val=data.frame(.NotUsed=NA),clus
         for (i in 1:nb.sim){
             p.td <- Coef[i,which.td]
             p.ntd <- Coef[i,which.ntd]
-            temp.H <- HazardInt(x0=time.new.0,x=time.new,nph=nph.new,timecat0=time.cat.0,timecat=time.cat,fixobs=fix.new,param=p.td,paramf=p.ntd,deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]])
+            temp.H <- HazardInt(x=time.new,nph=nph.new,timecat=time.cat,fixobs=fix.new,param=p.td,paramf=p.ntd,deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]])
             lRes1[,i] <- temp.H$LogHaz
             lRes2[,i] <- log(temp.H$HazCum)
             Res1[,i] <- exp(temp.H$LogHaz)

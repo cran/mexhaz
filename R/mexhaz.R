@@ -166,6 +166,11 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
                 .Call(C_HazardNsR,x,nph,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk),as.double(intk),as.double(nsadj1),as.double(nsadj2))
             }
         }
+        else if (base=="weibull"){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                .Call(C_HazardWeibR,x,nph,fixobs,param,paramf)
+            }
+        }
     }
     else if (ncol(Y)==3){
         if (Survtype!="counting"){
@@ -195,6 +200,11 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
                     .Call(C_HazardNsC,x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk),as.double(intk),as.double(nsadj1),as.double(nsadj2))
                 }
             }
+            else if (base=="weibull"){
+                HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                    .Call(C_HazardWeibC,x0,x,nph,fixobs,param,paramf)
+                }
+            }
         }
         else {
             if (base=="pw.cst"){
@@ -217,44 +227,10 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
                     .Call(C_HazardNsL,x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,as.double(matk),as.double(totk),as.double(intk),as.double(nsadj1),as.double(nsadj2))
                 }
             }
-        }
-    }
-
-    if (base=="weibull"){
-        if (!(Survtype=="counting" & !is.null(random))){
-            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
-                l.lambda.beta <- NULL
-                Lambda.beta <- NULL
-                lx <- log(x)
-                log.p.LT.1 <- paramf[1] + as.vector(fixobs%*%paramf[-1])
-                log.p.LT.2 <- param[1] + as.vector(nph%*%param[-1])
-                l.lambda.beta <- log.p.LT.2+lx*(exp(log.p.LT.2)-1)+log.p.LT.1
-                if (is.null(x0)){
-                    Lambda.beta <- exp(log.p.LT.1)*x^exp(log.p.LT.2)
+            else if (base=="weibull"){
+                HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                    .Call(C_HazardWeibL,x0,x,nph,fixobs,param,paramf)
                 }
-                else {
-                    Lambda.beta <- exp(log.p.LT.1)*(x^exp(log.p.LT.2)-x0^exp(log.p.LT.2))
-                }
-                valtot <- sum(l.lambda.beta) + sum(Lambda.beta)
-                Test <- sum((is.nan(valtot)) | (valtot==Inf))
-                Result <- list(LogHaz=l.lambda.beta, HazCum0=0, HazCum=Lambda.beta, Test=Test)
-                return(Result)
-            }
-        }
-        else {
-            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
-                l.lambda.beta <- NULL
-                Lambda.beta <- NULL
-                lx <- log(x)
-                log.p.LT.1 <- paramf[1] + as.vector(fixobs%*%paramf[-1])
-                log.p.LT.2 <- param[1] + as.vector(nph%*%param[-1])
-                l.lambda.beta <- log.p.LT.2+lx*(exp(log.p.LT.2)-1)+log.p.LT.1
-                Lambda.beta0 <- exp(log.p.LT.1)*x0^exp(log.p.LT.2)
-                Lambda.beta  <- exp(log.p.LT.1)*x^exp(log.p.LT.2)
-                valtot <- sum(l.lambda.beta) + sum(Lambda.beta)
-                Test <- sum((is.nan(valtot)) | (valtot==Inf))
-                Result <- list(LogHaz=l.lambda.beta, HazCum0=Lambda.beta0, HazCum=Lambda.beta, Test=Test)
-                return(Result)
             }
         }
     }
@@ -545,13 +521,13 @@ mexhaz <- function(formula,data,expected=NULL,base=c("weibull","exp.bs","exp.ns"
         }
         names.nph <- unlist(sapply(names.nph,function(x){paste(x,names.base,sep="*")}))
 
-        fix.obs <- t(fix.obs) # Matrix of fixed effects has to be transposed for use by the Int/Delta functions
-        nph.obs <- t(nph.obs) # Matrix of time-dependent effects has to be transposed for use by the Int/Delta functions
         param.names <- c(intercept,names.base,names.fix,names.nph)
         n.par.fix <- n.td.base+n.ntd+n.td.nph
         param.init <- rep(0,n.par.fix)
         param.init[1:(n.td.base+n.inter)] <- -1
     }
+    fix.obs <- t(fix.obs) # Matrix of fixed effects has to be transposed for use by the Int/Delta functions
+    nph.obs <- t(nph.obs) # Matrix of time-dependent effects has to be transposed for use by the Int/Delta functions
 
     # Creation of objects related to the random effect
     n.clust <- 1
