@@ -1,7 +1,7 @@
 ### R code from vignette source 'mexhaz.Rnw'
 
 ###################################################
-### code chunk number 1: mexhaz.Rnw:893-896
+### code chunk number 1: mexhaz.Rnw:890-893
 ###################################################
 options(prompt = "R> ", continue = "+  ", width = 76, useFancyQuotes = FALSE)
 library("mexhaz")
@@ -9,7 +9,7 @@ library("rstpm2")
 
 
 ###################################################
-### code chunk number 2: mexhaz.Rnw:968-974
+### code chunk number 2: mexhaz.Rnw:965-971
 ###################################################
 data("simdatn1", package="mexhaz")
 data("simdatn2", package="mexhaz")
@@ -20,13 +20,13 @@ head(simdatn2,3)
 
 
 ###################################################
-### code chunk number 3: mexhaz.Rnw:997-998
+### code chunk number 3: mexhaz.Rnw:994-995
 ###################################################
 Form1 <- Surv(time=timesurv, event=vstat) ~ agec + IsexH
 
 
 ###################################################
-### code chunk number 4: mexhaz.Rnw:1002-1009
+### code chunk number 4: mexhaz.Rnw:999-1006
 ###################################################
 ModWb <- mexhaz(formula=Form1, data=simdatn1, base="weibull")
 ModPw <- mexhaz(formula=Form1, data= simdatn1, base="pw.cst",
@@ -38,7 +38,7 @@ ModNs <- mexhaz(formula=Form1, data=simdatn1, base="exp.ns",
 
 
 ###################################################
-### code chunk number 5: mexhaz.Rnw:1013-1021
+### code chunk number 5: mexhaz.Rnw:1010-1018
 ###################################################
 res <- t(sapply(list(ModWb, ModPw, ModNs, ModBs),
                 function(x) {round(rbind(x$coeff[c("agec")], x$coeff[c("IsexH")],
@@ -51,7 +51,7 @@ res
 
 
 ###################################################
-### code chunk number 6: mexhaz.Rnw:1058-1063
+### code chunk number 6: mexhaz.Rnw:1055-1060
 ###################################################
 MyTime <- seq(0,10,le=1001)
 MyData <- data.frame(agec=0, IsexH=c(0,1))
@@ -61,14 +61,14 @@ round(P.bs.10$results,3)
 
 
 ###################################################
-### code chunk number 7: mexhaz.Rnw:1072-1074
+### code chunk number 7: mexhaz.Rnw:1069-1071
 ###################################################
 P.bs0 <- predict(ModBs, time.pts=MyTime, data.val=MyData[1,])
 P.bs1 <- predict(ModBs, time.pts=MyTime, data.val=MyData[2,])
 
 
 ###################################################
-### code chunk number 8: mexhaz.Rnw:1099-1106
+### code chunk number 8: mexhaz.Rnw:1096-1103
 ###################################################
 plot(P.bs1, which="hazard", ylim=c(0,1.5), lwd=2.5, col="blue",
 main="Mortality hazard")
@@ -126,7 +126,7 @@ lines(P.pw0, which="surv", conf.int=FALSE, lwd=3, lty.pe=6)
 
 
 ###################################################
-### code chunk number 11: mexhaz.Rnw:1199-1202
+### code chunk number 11: mexhaz.Rnw:1196-1199
 ###################################################
 ModBs2 <- mexhaz(Surv(time=timesurv, event=vstat) ~ agec + IsexH,
                  data=simdatn2, base="exp.bs", degree=2,
@@ -134,7 +134,7 @@ ModBs2 <- mexhaz(Surv(time=timesurv, event=vstat) ~ agec + IsexH,
 
 
 ###################################################
-### code chunk number 12: mexhaz.Rnw:1205-1208
+### code chunk number 12: mexhaz.Rnw:1202-1205
 ###################################################
 ModBs2.Nph <- mexhaz(Surv(time=timesurv, event=vstat)~ agec + IsexH +
 nph(IsexH), data=simdatn2, base="exp.bs",
@@ -142,7 +142,7 @@ degree=2, knots=c(1,5))
 
 
 ###################################################
-### code chunk number 13: mexhaz.Rnw:1211-1231
+### code chunk number 13: mexhaz.Rnw:1208-1228
 ###################################################
 
 ll1 <- ModBs2$loglik
@@ -187,7 +187,7 @@ lines(P.Bs2N.M$results$time.pts, HR.Sup, type="l", lwd=2, lty="dashed")
 
 
 ###################################################
-### code chunk number 15: mexhaz.Rnw:1297-1300
+### code chunk number 15: mexhaz.Rnw:1294-1297
 ###################################################
 ModBsExc <- mexhaz(Surv(timesurv, vstat) ~ agec + IsexH +
 nph(IsexH), data=simdatn1, base="exp.bs",
@@ -195,13 +195,13 @@ degree=3, knots=c(1,5), expected="popmrate")
 
 
 ###################################################
-### code chunk number 16: mexhaz.Rnw:1303-1304
+### code chunk number 16: mexhaz.Rnw:1300-1301
 ###################################################
 summary(ModBsExc)
 
 
 ###################################################
-### code chunk number 17: mexhaz.Rnw:1321-1326
+### code chunk number 17: mexhaz.Rnw:1318-1323
 ###################################################
 data("colon", package="rstpm2")
 data("popmort", package="rstpm2")
@@ -211,7 +211,7 @@ head(popmort, 3)
 
 
 ###################################################
-### code chunk number 18: mexhaz.Rnw:1358-1366
+### code chunk number 18: mexhaz.Rnw:1355-1363
 ###################################################
 colon2 <- within(rstpm2::colon, {
     status <- ifelse(surv_mm > 120.5, 1, status)
@@ -224,7 +224,7 @@ colon2 <- within(rstpm2::colon, {
 
 
 ###################################################
-### code chunk number 19: mexhaz.Rnw:1372-1377
+### code chunk number 19: mexhaz.Rnw:1369-1374
 ###################################################
 colon2 <- merge(colon2, popmort, by.x=c("sex", "exitage", "exityear"),
                 by.y=c("sex", "age", "year"))
@@ -234,7 +234,7 @@ head(colon2[, c("sex", "age", "stage", "status",
 
 
 ###################################################
-### code chunk number 20: mexhaz.Rnw:1401-1413
+### code chunk number 20: mexhaz.Rnw:1398-1410
 ###################################################
 ModBsExc.1n <- mexhaz(Surv(timesurv, vstat) ~ agec + IsexH + nph(IsexH),
                      data=simdatn1, base="exp.bs", degree=3, knots=c(1,5),
@@ -251,13 +251,13 @@ ModBsExc.10n <- mexhaz(Surv(timesurv, vstat) ~ agec + IsexH + nph(IsexH),
 
 
 ###################################################
-### code chunk number 21: mexhaz.Rnw:1419-1420
+### code chunk number 21: mexhaz.Rnw:1416-1417
 ###################################################
 summary(ModBsExc.10n)
 
 
 ###################################################
-### code chunk number 22: mexhaz.Rnw:1428-1437
+### code chunk number 22: mexhaz.Rnw:1425-1434
 ###################################################
 res <- t(sapply(list(ModBsExc.1n, ModBsExc.5n, ModBsExc.10n),
                 function(x) {
@@ -271,14 +271,14 @@ res
 
 
 ###################################################
-### code chunk number 23: mexhaz.Rnw:1456-1458
+### code chunk number 23: mexhaz.Rnw:1453-1455
 ###################################################
 PBsExcR.c15 <- predict(ModBsExc.10n, time.pts=MyTime,
 data.val=MyData[2,], cluster="15")
 
 
 ###################################################
-### code chunk number 24: mexhaz.Rnw:1463-1465
+### code chunk number 24: mexhaz.Rnw:1460-1462
 ###################################################
 PBsExcR.0 <- predict(ModBsExc.10n, time.pts=MyTime,
 data.val=MyData[2,])

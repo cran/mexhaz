@@ -1,22 +1,20 @@
 \documentclass[nojss, shortnames]{jss}
 
-% \VignetteIndexEntry{excesshazard}
+% \VignetteIndexEntry{Analysis of time-to-event data with mexhaz}
 % \VignetteEngine{utils::Sweave}
 
 \author{Hadrien Charvat\\National Cancer Center\\Tokyo, Japan \And
   Aur\'elien Belot\\London School of Hygiene \\and Tropical Medicine, UK}
-\title{\pkg{mexhaz}: An \proglang{R} Package for Fitting Flexible Hazard-Based
-  Regression Models for Overall and Excess Mortality with a Random Effect}
+\title{Analysis of time-to-event data with \pkg{mexhaz}}
 
 %% for pretty printing and a nice hypersummary also set:
 \Plainauthor{Hadrien Charvat, Aur\'elien Belot} %% comma-separated
-\Plaintitle{mexhaz: An R Package for Fitting Flexible Hazard-Based
-  Regression Models for Overall and Excess Mortality with a Random Effect} %% without formatting
-\Shorttitle{mexhaz: Mixed-Effect Excess Hazard Regression Models} %% a short title (if necessary)
+\Plaintitle{Analysis of time-to-event data with mexhaz} %% without formatting
+\Shorttitle{Analysis of time-to-event data with mexhaz} %% a short title (if necessary)
 
 %% an abstract and keywords
 \Abstract{This vignette provides a description of the \proglang{R}
-  package \pkg{mexhaz}. It is based on an article accepted for
+  package \pkg{mexhaz} and its use. It is adapted from an article accepted for
   publication in the \textit{Journal of Statistical Software}
   \citep{CharvatJSS}. The \pkg{mexhaz} package allows for fitting
   flexible hazard-based regression models with the possibility to add
@@ -43,8 +41,7 @@
   hazard and (net) survival (possibly with cluster-specific
   predictions in the case of random effect models) are provided. We
   illustrate the use of the different options of the \pkg{mexhaz}
-  package and compare the results obtained with those of other
-  available \proglang{R} packages.
+  package with practical examples.
 
 }
 \Keywords{adaptive Gauss-Hermite quadrature, excess hazard, flexible models, frailty models, time-dependent effects, \proglang{C}}

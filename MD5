@@ -1,6 +1,6 @@
-895800d7801b3f80961740836c06327a *DESCRIPTION
+b49a10bffe0308b4ae4aba974a34a022 *DESCRIPTION
 d08ab9219800f8e2632e1911fdbd8a82 *NAMESPACE
-02059fd0be6d67726a52882a4d200d45 *NEWS
+1e2955dac3d8221dc582bd17670e88eb *NEWS
 6f927e7b7bf263463ce1c6590c5d37ac *R/fixef.mexhaz.R
 6ec023e8cbbbe939ea595598dc5ac3d6 *R/lines.predMexhaz.R
 b00cf30365fe69c4780aaa4f834f4236 *R/mexhaz.R
@@ -14,12 +14,12 @@ b0e47c31758d048995cc1aa0e5d401a3 *R/print.summary.mexhaz.R
 739e9180858d3e80543d8cdcb1b10284 *R/summary.mexhaz.R
 b7afc1aec33c904d2ceba121385f936f *R/update.mexhaz.R
 099b352cc830fc3ff05683f13f61d386 *R/vcov.mexhaz.R
-407ef2386a4f8be1a73be6a7d43d69be *build/vignette.rds
+04ac8cee0a14a41ae5a8d2c27ff0b36b *build/vignette.rds
 b7c742c0b1bf1dc7cd8a5a1974cadda3 *data/simdatn1.RData
 5e332f9db3b9b7e3fd145f0a89beb224 *data/simdatn2.RData
-0c0ca19c04cfa90e679ddcd877c489cc *inst/doc/mexhaz.R
-23c64b432230f5a31042f6b6fbfa984b *inst/doc/mexhaz.Rnw
-d8b760274894329ff880277d19bd4b44 *inst/doc/mexhaz.pdf
+198b184025372408335eb12f6d18bc75 *inst/doc/mexhaz.R
+43d9214a8c7927f3f5c30dd5df0512fe *inst/doc/mexhaz.Rnw
+fcef1aebf3f83baff9de3389d6c097c2 *inst/doc/mexhaz.pdf
 bd663c7a3a43b42b5aa808ce3ce3b7f2 *man/fixef.Rd
 7dbec3fb5ab3519247dc41559296270a *man/fixef.mexhaz.Rd
 49ed267367a08ce94c6878211cbe3652 *man/lines.predMexhaz.Rd
@@ -56,8 +56,8 @@ c54673014b98addf49276703e59361a9 *src/HazardBs23C.c
 aa8f6c30edc904630069d3d1e66c9650 *src/HazardBs23L.c
 dbab9828e7f4297211407064be42998a *src/HazardBs23R.c
 6d86ad518f86803404e034e66e9b0c66 *src/HazardNsC.c
-c42bf76e9e93decc2509097ea9316865 *src/HazardNsL.c
-47c820ffd3a16d456badfbdcc87bf9fe *src/HazardNsR.c
+e3198be102b10241efe93a103b5bfb65 *src/HazardNsL.c
+3b1809021bcad05a4b812fa13c6b2d32 *src/HazardNsR.c
 413e1d9538a36c2db9a6dbd6dc4f3f29 *src/HazardWeibC.c
 b6d9929e77d6d1458ca7bfc9d0647ffa *src/HazardWeibL.c
 bd40698955519448939f78ff01b54021 *src/HazardWeibR.c
@@ -66,5 +66,5 @@ d32e1e7849500b901a6806dd4a664d9f *src/OptFunc.h
 20964480e15a0a4d65bfbe89d40b9467 *src/SplineFunc.c
 52f2cc0d98ec8c0da97d885185dd066f *src/SplineFunc.h
 ec36fc7c868ab42b1530bc0b2dd715df *src/init.c
-23c64b432230f5a31042f6b6fbfa984b *vignettes/mexhaz.Rnw
+43d9214a8c7927f3f5c30dd5df0512fe *vignettes/mexhaz.Rnw
 a6ef4001fcd938225c8f880ed5b1ff39 *vignettes/mexhazBiblio.bib

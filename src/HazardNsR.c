@@ -3,8 +3,8 @@
 /* (when the log-hazard is described            */
 /* by a restricted cubic B-spline)              */
 /* Author: H. Charvat                           */
-/* Last modified: 2019/11/26                    */
-/* Part of the mexhaz 1.7 package               */
+/* Last modified: 2020/10/06                    */
+/* Part of the mexhaz 1.10 package              */
 /************************************************/
 
 #include <R.h>
@@ -72,7 +72,7 @@ SEXP HazardNsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP param, SEXP par
   double *MyBasisB = (double *)R_alloc(leB,sizeof(double));
 
   if (nnph==1){
-    double *CumVecSpl = (double *)R_alloc((lintk-1),sizeof(double));
+    double *CumVecSpl = (double *)R_alloc(lintk,sizeof(double));
     double tempV;
     CumVecSpl[0] = 0;
     for (i=0; i<(lintk-1); i++){
