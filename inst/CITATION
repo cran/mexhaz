@@ -1,0 +1,17 @@
+bibentry(bibtype = "Article",
+  title        = "{mexhaz}: An {R} Package for Fitting Flexible Hazard-Based Regression Models for Overall and Excess Mortality with a Random Effect",
+  author       = c(person(given = "Hadrien",
+                          family = "Charvat",
+                          email = "chadrien@ncc.go.jp"),
+                   person(given = "Aur\\'elien",
+                          family = "Belot",
+                          email = "Aurelien.Belot@lshtm.ac.uk")),
+  journal      = "Journal of Statistical Software",
+  year         = "2021",
+  volume       = "98",
+  number       = "14",
+  pages        = "1--36",
+  doi          = "10.18637/jss.v098.i14",
+  header       = "To cite mexhaz in publications use:"
+)
+

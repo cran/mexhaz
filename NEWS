@@ -1,3 +1,8 @@
+Changes in Version 1.11
+  
+  Added a reference to the JSS article.
+  Made a small correction in the update() function.
+
 Changes in Version 1.10
   
   Corrected a memory issue in the C source code.

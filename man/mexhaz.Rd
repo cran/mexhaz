@@ -282,7 +282,12 @@ represents additional parameters directly passed to \code{nlm} or
   Rachet B, Launoy G, Belot A; CENSUR Working Survival Group. A
   multilevel excess hazard model to estimate net survival on
   hierarchical data allowing for non-linear and non-proportional effects
-  of covariates. Stat Med 2016;35:3066-3084 (doi: 10.1002/sim.6881)}
+  of covariates. Stat Med 2016;35(18):3066-3084 (doi: 10.1002/sim.6881)
+
+Charvat H, Belot A. An R package for fitting flexible hazard-based
+regression models for overall and excess mortality with a random
+effect. J Stat Softw 2021;98(14):1-36 (doi: 10.18637/jss.v098.i14)
+}
 \author{
 Hadrien Charvat, Aurelien Belot
 }

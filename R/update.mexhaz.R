@@ -82,7 +82,7 @@ update.mexhaz <- function (object, formula, data, expected = NULL, base = c("wei
             if (n.td.nph>0){
                 names.nph <- paste("Rho",names.nph,sep="*")
             }
-            param.names <- c("Lambda","Rho",names.fix,names.nph)
+            param.names <- c("logLambda","logRho",names.fix,names.nph)
             n.par.fix <- n.td.base+n.ntd+n.td.nph
             param.init <- rep(0,n.par.fix)
             param.init[1:2] <- 0.1
@@ -136,7 +136,7 @@ update.mexhaz <- function (object, formula, data, expected = NULL, base = c("wei
         n.rand <- 0
         if (!is.null(random)){
             n.rand <- 1
-            param.names <- c(param.names,paste(random," (sd)",sep=""))
+            param.names <- c(param.names,paste(random," [log(sd)]",sep=""))
         }
         init <- c(param.init,rep(0.1,n.rand))
         if (length(which(!is.na(match(param.names,names(object$coefficients)))))>0){
