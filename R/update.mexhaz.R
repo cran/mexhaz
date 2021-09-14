@@ -1,8 +1,9 @@
 update.mexhaz <- function (object, formula, data, expected = NULL, base = c("weibull",
     "exp.bs", "exp.ns", "pw.cst"), degree = 3, knots = NULL,
     bound = NULL, n.gleg = 20, init = NULL, random = NULL, n.aghq = 10,
-    fnoptim = c("nlm", "optim"), verbose = 100, method = "Nelder-Mead",
-    iterlim = 10000, numHess = FALSE, print.level = 1,...) {
+    fnoptim = c("nlm", "optim"), verbose = 0, method = "Nelder-Mead",
+    iterlim = 10000, numHess = FALSE, print.level = 1, exactGradHess=TRUE,
+    gradtol=ifelse(exactGradHess,1e-8,1e-6), ...) {
     Call <- match.call()
     call.mod <- object$call
     if (!("formula"%in%names(Call))){

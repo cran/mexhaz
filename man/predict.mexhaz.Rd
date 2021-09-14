@@ -81,7 +81,7 @@ delta.type.h=c("log", "plain"), delta.type.s=c("log-log", "log",
 %}
 \value{
   An object of class \code{predMexhaz} that can be used by
-  the functions \code{plot.predMexhaz} and \code{points.predMexhaz} to produce graphics of the (excess) hazard and
+  the functions \code{plot.predMexhaz}, \code{points.predMexhaz} and \code{lines.predMexhaz} to produce graphics of the (excess) hazard and
   the (net) survival. It contains the following elements:
   \item{call}{the \code{mexhaz} function call on which the model is based.}
 \item{results}{a \code{data.frame} consisting of: the time

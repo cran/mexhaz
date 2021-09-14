@@ -83,7 +83,7 @@ SEXP DeltaBs23R(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP paramt, SEXP d
   double **GradLHaz = dmatrix(REAL(gradlhaz), A1, A2);
   double **GradLCum = dmatrix(REAL(gradlcum), A1, A2);
 
-  double (*Fpt)(double, double*, double*, double*, double*, int, int, int, double*);
+  double (*Fpt)(double, double*, double*, double*, double*, int, int, double*);
   if (Deg==2){
     Fpt = &DeltaSpline2;
   }
@@ -117,11 +117,11 @@ SEXP DeltaBs23R(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP paramt, SEXP d
     }
 
     for (i=0; i<tcz; i++){
-      tempL += IntDSpline23((*Fpt), TotKPos[i-1], TotKPos[i], &TotK[i], &MatK[Cst2*i], TempD, &MyParam[i], N, lW, lleg, Cst1, nbase, i, tempLvec, Res);
+      tempL += IntDSpline23((*Fpt), TotKPos[i-1], TotKPos[i], &TotK[i], &MatK[Cst2*i], TempD, &MyParam[i], N, lW, lleg, nbase, i, tempLvec, Res);
     }
-    tempL += IntDSpline23((*Fpt), TotKPos[tcz-1], X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], N, lW, lleg, Cst1, nbase, tcz, tempLvec, Res);
+    tempL += IntDSpline23((*Fpt), TotKPos[tcz-1], X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], N, lW, lleg, nbase, tcz, tempLvec, Res);
     InvtempL = 1/tempL;
-    (*Fpt)(X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], Cst1, nbase, tcz, Res);
+    (*Fpt)(X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], nbase, tcz, Res);
 
     for (i=0; i<nnph; i++){
       for (j=0; j<nbase; j++){

@@ -1,3 +1,8 @@
+Changes in Version 2.0
+
+  For the fixed effect (overall and excess) hazard model as well as for the random effect hazard model (overall only), the default optimisation procedure is Newton-Raphson (from nlm) based on the analytic gradient and Hessian. This greatly improves computational time especially for large datasets. The previous behaviour of the mexhaz function can still be obtained by setting the argument 'exactGradHess' to FALSE.
+  The gradient and Hessian of the likelihood evaluated at the estimated parameters are now returned in the mexhaz object.
+
 Changes in Version 1.11
   
   Added a reference to the JSS article.

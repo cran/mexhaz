@@ -42,7 +42,7 @@ lty.pe="solid", lty.ci="dashed", ...)
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
-\code{\link{predict.mexhaz}}, \code{\link{points.predMexhaz}}
+\code{\link{predict.mexhaz}}, \code{\link{points.predMexhaz}}, \code{\link{lines.predMexhaz}}
 }
 
 \examples{

@@ -12,8 +12,9 @@ as starting values for the corresponding parameters of the new model.
 \usage{\method{update}{mexhaz}(object, formula, data, expected = NULL,
 base = c("weibull","exp.bs", "exp.ns", "pw.cst"), degree = 3, knots =
 NULL, bound = NULL, n.gleg = 20, init = NULL, random = NULL, n.aghq =
-10, fnoptim = c("nlm", "optim"), verbose = 100, method = "Nelder-Mead",
-iterlim=10000, numHess=FALSE, print.level=1,...)}
+10, fnoptim = c("nlm", "optim"), verbose = 0, method = "Nelder-Mead",
+iterlim=10000, numHess=FALSE, print.level=1, exactGradHess = TRUE,
+gradtol = ifelse(exactGradHess, 1e-8, 1e-6), ...)}
 
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -100,23 +101,31 @@ default, \code{n.gleg=20}.
 
     for the baseline hazard:
 
-    if \code{base="weibull"}, the scale and shape parameters are set
+    if \code{exactGradHess=TRUE} (except for the excess hazard random
+    effect model for which this argument is ignored), the intercept is
+    set to 0.5*log(Number of events/Person-years of observation) and all
+    other parameters set to 0. In case of failed convergence, several
+    trials are run with an adaptation of the value of the intercept.
+
+    if \code{exactGradHess=FALSE}, the following values are used:
+
+    - if \code{base="weibull"}, the scale and shape parameters are set
     to 0.1;
 
-    if \code{base="exp.bs"}, the parameters of the B-spline are all
+    - if \code{base="exp.bs"}, the parameters of the B-spline are all
     set to -1;
 
-    if \code{base="exp.ns"}, the parameters of the restricted cubic B-spline are all
+    - if \code{base="exp.ns"}, the parameters of the restricted cubic B-spline are all
     set to -1;
 
-    if \code{base="pw.cst"}, the logarithm of the piecewise-constant
+    - if \code{base="pw.cst"}, the logarithm of the piecewise-constant
     hazards are set to -1;
 
      the parameters describing the effects of the covariates are all set
      to 0;
 
     the parameter representing the standard deviation of the random
-    effect is set to 0.1.
+    effect is set to 0.1. (if \code{exactGradHess=TRUE}, several trials are run with an adaptation of the value in case of failed convergence).
 }
   \item{random}{
 name of the variable to be entered as a random effect (must be given
@@ -130,7 +139,8 @@ quadrature. By default, \code{n.aghq=10}.
 }
   \item{fnoptim}{
 name of the R optimisation procedure used to maximise the
-    likelihood. Selection can be made between \code{"nlm"} (by default) and \code{"optim"}.
+    likelihood. Selection can be made between \code{"nlm"} (by default) and \code{"optim"}. Note: if \code{exactGradHess=TRUE}, this
+    argument will be ignored (\code{fnoptim} will be set automatically to \code{"nlm"}).
 }
   \item{verbose}{
 integer parameter representing the frequency at which the current state
@@ -164,7 +174,7 @@ logical value allowing the user to choose between the Hessian returned
     latter might be more accurate but its estimation is more
     time-consuming. We suggest to use the default Hessian estimation
     procedure during model building and estimate the \code{numDeriv}-based
-    Hessian only on the final model.
+    Hessian only on the final model. Note: if \code{exactGradHess=TRUE}, this argument is ignored.
 }
   \item{print.level}{
     this argument is only used if \code{fnoptim="nlm"}. It determines the
@@ -173,6 +183,21 @@ logical value allowing the user to choose between the Hessian returned
     details on the initial and final step of the optimisation procedure
     are printed (see the help page of \code{nlm} for further details).
     }
+  \item{exactGradHess}{ logical value allowing the user to decide
+    whether maximisation of the likelihood should be based on the
+    analytic gradient and Hessian computed internally (default,
+    corresponding to \code{exactGradHess=TRUE}).  In that case,
+    optimisation is performed with the \code{nlm} function. Note: even
+    if set to \code{TRUE}, this argument is ignored when the user wants
+    to fit an excess hazard model including a random effect because in
+    that case, there is no simple way to obtain the analytic gradient
+    and Hessian.}
+  \item{gradtol}{
+    this argument is only used if \code{fnoptim="nlm"}. It corresponds
+    to the tolerance at which the scaled gradient is considered close
+    enough to zero to terminate the algorithm. The default value depends
+    on the value of the argument \code{exactGradHess}. 
+  }
   \item{\dots}{
 represents additional parameters directly passed to \code{nlm} or
 \code{optim} to control the optimisation process.

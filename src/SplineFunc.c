@@ -4,10 +4,21 @@
 #include <stdio.h>
 #include "SplineFunc.h"
 
-double Spline2(double x, double *TotKT, double *MatKT, double *TempD, double *ParamT, int Cst){
+double Spline1(double x, double *TotKT, double *MatKT, double *TempD, double *ParamT){
+  int i;
+  double res, A;
+  for (i=0; i<2; i++){
+    TempD[i] = x - TotKT[i];
+  }
+  A = MatKT[0];
+  res = ParamT[1]*A*TempD[0]-ParamT[0]*A*TempD[1];
+  return res;
+}
+
+double Spline2(double x, double *TotKT, double *MatKT, double *TempD, double *ParamT){
   int i;
   double res, A, B;
-  for (i=0; i<Cst; i++){
+  for (i=0; i<4; i++){
     TempD[i] = x - TotKT[i];
   }
   A = MatKT[0]*TempD[1];
@@ -16,10 +27,10 @@ double Spline2(double x, double *TotKT, double *MatKT, double *TempD, double *Pa
   return res;
 }
 
-double Spline3(double x, double *TotKT, double *MatKT, double *TempD, double *ParamT, int Cst){
+double Spline3(double x, double *TotKT, double *MatKT, double *TempD, double *ParamT){
   int i;
   double res, A, B, C;
-  for (i=0; i<Cst; i++){
+  for (i=0; i<6; i++){
     TempD[i] = x - TotKT[i];
   }
   A = MatKT[0]*TempD[2]*TempD[2];
@@ -70,14 +81,14 @@ double NSpl(double x, double *TotKT, double *MatKT, double *NsAdj1, double *NsAd
   return res;
 }
 
-double IntSpline23(double (*Spl)(), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg, int Cst){
+double IntSpline23(double (*Spl)(), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg){
   int i;
   double A = 0.5*(b-a);
   double B = 0.5*(b+a);
   double Result = 0;
   double Temp;
   for (i=0; i<lleg; i++){
-    Temp = Spl((A*N[i]+B), TotKT, MatKT, TempD, ParamT, Cst);
+    Temp = Spl((A*N[i]+B), TotKT, MatKT, TempD, ParamT);
     Result += exp(lW[i]+Temp);
   }
   Result *= A;
@@ -98,14 +109,32 @@ double IntNSpl(double a, double b, double *TotKT, double *MatKT, double *NsAdj1,
   return Result;
 }
 
-double DeltaSpline2(double x, double *TotKT, double *MatKT, double *TempD, double *ParamT, int Cst, int Lsdk, int Idx, double *Res){
+double DeltaSpline1(double x, double *TotKT, double *MatKT, double *TempD, double *ParamT, int Lsdk, int Idx, double *Res){
+  int i, j;
+  double res, A;
+  double *ResT;
+  for (j=0; j<(Lsdk+1); j++){
+    Res[j] = 0;
+  }
+  for (i=0; i<2; i++){
+    TempD[i] = x - TotKT[i];
+  }
+  ResT = &Res[Idx];
+  A = MatKT[0];
+  ResT[0] = -A*TempD[1];
+  ResT[1] = A*TempD[0];
+  res = ParamT[1]*ResT[1]+ParamT[0]*ResT[0];
+  return res;
+}
+
+double DeltaSpline2(double x, double *TotKT, double *MatKT, double *TempD, double *ParamT, int Lsdk, int Idx, double *Res){
   int i, j;
   double res, A, B;
   double *ResT;
   for (j=0; j<(Lsdk+1); j++){
     Res[j] = 0;
   }
-  for (i=0; i<Cst; i++){
+  for (i=0; i<4; i++){
     TempD[i] = x - TotKT[i];
   }
   ResT = &Res[Idx];
@@ -118,14 +147,14 @@ double DeltaSpline2(double x, double *TotKT, double *MatKT, double *TempD, doubl
   return res;
 }
 
-double DeltaSpline3(double x, double *TotKT, double *MatKT, double *TempD, double *ParamT, int Cst, int Lsdk, int Idx, double *Res){
+double DeltaSpline3(double x, double *TotKT, double *MatKT, double *TempD, double *ParamT, int Lsdk, int Idx, double *Res){
   int i, j;
   double res, A, B, C;
   double *ResT;
   for (j=0; j<(Lsdk+1); j++){
     Res[j] = 0;
   }
-  for (i=0; i<Cst; i++){
+  for (i=0; i<6; i++){
     TempD[i] = x - TotKT[i];
   }
   ResT = &Res[Idx];
@@ -180,14 +209,14 @@ double DeltaNSpl(double x, double *TotKT, double *MatKT, double *NsAdj1, double 
   return res;
 }
 
-double IntDSpline23(double (*DSpl)(), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg, int Cst, int Lsdk, int Idx, double *TempV, double *Res){
+double IntDSpline23(double (*DSpl)(), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg, int Lsdk, int Idx, double *TempV, double *Res){
   double A = 0.5*(b-a);
   double B = 0.5*(b+a);
   int i, j;
   double Result = 0;
   double Temp, Temp2;
   for (i=0; i<lleg; i++){
-    Temp = DSpl((A*N[i]+B), TotKT, MatKT, TempD, ParamT, Cst, Lsdk, Idx, Res);
+    Temp = DSpl((A*N[i]+B), TotKT, MatKT, TempD, ParamT, Lsdk, Idx, Res);
     Temp2 = exp(lW[i]+Temp);
     Result += Temp2;
     for (j=0; j<(Lsdk+1); j++){
@@ -210,6 +239,48 @@ double IntDNSpl(double a, double b, double *TotKT, double *MatKT, double *NsAdj1
     Result += Temp2;
     for (j=0; j<leN; j++){
       TempV[j] += A*Res[j]*Temp2;
+    }
+  }
+  Result *= A;
+  return Result;
+}
+
+double IntDSpline23H(double (*DSpl)(), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg, int Lsdk, int Idx, double *TempV, double *Hess, double *Res){
+  double A = 0.5*(b-a);
+  double B = 0.5*(b+a);
+  int i, j, k;
+  double Result = 0;
+  double Temp, Temp2;
+  for (i=0; i<lleg; i++){
+    Temp = DSpl((A*N[i]+B), TotKT, MatKT, TempD, ParamT, Lsdk, Idx, Res);
+    Temp2 = exp(lW[i]+Temp);
+    Result += Temp2;
+    for (j=0; j<Lsdk; j++){
+      TempV[j] += A*Res[j+1]*Temp2;
+      for (k=0; k<Lsdk; k++){
+	Hess[k+j*Lsdk] += A*Res[j+1]*Res[k+1]*Temp2;
+      }
+    }
+  }
+  Result *= A;
+  return Result;
+}
+
+double IntDNSplH(double a, double b, double *TotKT, double *MatKT, double *NsAdj1, double *NsAdj2, double *BasisB, double *TempD, double *ParamT, double *N, double *lW, int lleg, int leB, int leN, int Idx, double *TempV, double *Hess, double *Res){
+  double A = 0.5*(b-a);
+  double B = 0.5*(b+a);
+  int i, j, k;
+  double Result = 0;
+  double Temp, Temp2;
+  for (i=0; i<lleg; i++){
+    Temp = DeltaNSpl((A*N[i]+B), TotKT, MatKT, NsAdj1, NsAdj2, BasisB, TempD, ParamT, leB, leN, Idx, Res);
+    Temp2 = exp(lW[i]+Temp);
+    Result += Temp2;
+    for (j=0; j<leN; j++){
+      TempV[j] += A*Res[j]*Temp2;
+      for (k=0; k<leN; k++){
+	Hess[k+j*leN] += A*Res[j]*Res[k]*Temp2;
+      }
     }
   }
   Result *= A;

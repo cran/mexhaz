@@ -71,7 +71,7 @@ SEXP HazardBs23C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fi
   double *MyParam = (double *)R_alloc((nbase+1),sizeof(double));
   double *TempD = (double *)R_alloc(Cst1,sizeof(double));
 
-  double (*Fpt)(double, double*, double*, double*, double*, int);
+  double (*Fpt)(double, double*, double*, double*, double*);
   if (Deg==2){
     Fpt = &Spline2;
   }
@@ -95,11 +95,11 @@ SEXP HazardBs23C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fi
       tcz = TimeCat[z];
       tempL = 0;
       for (i=tcz0; i<tcz; i++){
-	tempL += IntSpline23((*Fpt), TotKPos[i-1], TotKPos[i], &TotK[i], &MatK[Cst2*i], TempD, &MyParam[i], N, lW, lleg, Cst1);
+	tempL += IntSpline23((*Fpt), TotKPos[i-1], TotKPos[i], &TotK[i], &MatK[Cst2*i], TempD, &MyParam[i], N, lW, lleg);
       }
-      tempL += IntSpline23((*Fpt), TotKPos[tcz-1], X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], N, lW, lleg, Cst1);
-      tempL -= IntSpline23((*Fpt), TotKPos[tcz0-1], X0[z], &TotK[tcz0], &MatK[Cst2*tcz0], TempD, &MyParam[tcz0], N, lW, lleg, Cst1);
-      tempH = (*Fpt)(X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], Cst1);
+      tempL += IntSpline23((*Fpt), TotKPos[tcz-1], X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], N, lW, lleg);
+      tempL -= IntSpline23((*Fpt), TotKPos[tcz0-1], X0[z], &TotK[tcz0], &MatK[Cst2*tcz0], TempD, &MyParam[tcz0], N, lW, lleg);
+      tempH = (*Fpt)(X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz]);
       Total += tempH + log(tempL) + tempF;
       LogHaz[z] = tempH + tempF;
       HazCum[z] = tempL*exp(tempF);
@@ -125,12 +125,12 @@ SEXP HazardBs23C(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fi
       tempL = 0;
       if (tcz0<tcz){
 	for (i=tcz0; i<tcz; i++){
-	  tempL += IntSpline23((*Fpt), TotKPos[i-1], TotKPos[i], &TotK[i], &MatK[Cst2*i], TempD, &MyParam[i], N, lW, lleg, Cst1);
+	  tempL += IntSpline23((*Fpt), TotKPos[i-1], TotKPos[i], &TotK[i], &MatK[Cst2*i], TempD, &MyParam[i], N, lW, lleg);
 	}
       }
-      tempL += IntSpline23((*Fpt), TotKPos[tcz-1], X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], N, lW, lleg, Cst1);
-      tempL -= IntSpline23((*Fpt), TotKPos[tcz0-1], X0[z], &TotK[tcz0], &MatK[Cst2*tcz0], TempD, &MyParam[tcz0], N, lW, lleg, Cst1);
-      tempH = (*Fpt)(X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], Cst1);
+      tempL += IntSpline23((*Fpt), TotKPos[tcz-1], X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz], N, lW, lleg);
+      tempL -= IntSpline23((*Fpt), TotKPos[tcz0-1], X0[z], &TotK[tcz0], &MatK[Cst2*tcz0], TempD, &MyParam[tcz0], N, lW, lleg);
+      tempH = (*Fpt)(X[z], &TotK[tcz], &MatK[Cst2*tcz], TempD, &MyParam[tcz]);
       Total += log(tempL) + tempH + tempF;
       LogHaz[z] = tempH + tempF;
       HazCum[z] = tempL*exp(tempF);
