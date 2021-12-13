@@ -23,7 +23,7 @@ logarithm of the full marginal likelihood, defined as the sum of the
 logarithms of the cluster-specific marginal likelihoods, is then
 maximised using an optimisation routine such as \code{nlm} (default) or
 \code{optim}. Functions to compute and plot the predicted (excess)
-hazard and (net) survival (possibly with cluster-specific predictions in
+hazard and (net) survival (possibly with marginal or cluster-specific predictions in
 the case of a random effect model) are provided.
 
 }

@@ -1,14 +1,14 @@
 print.mexhaz <- function(x, ...){
 
     se <- sqrt(diag(x$vcov))
-    tval <- coef(x)/se
+    zval <- coef(x)/se
     df <- x$n.obs-x$n.par
     n.miss <- x$n.obs.tot-x$n.obs
 
     TAB <- cbind(Estimate = coef(x),
                  StdErr = se,
-                 t.value = tval,
-                 p.value = 2*pt(-abs(tval),df=df))
+                 z.value = zval,
+                 p.value = 2*(1-pnorm(abs(zval))))
 
     cat("Call:\n")
     print(x$call)

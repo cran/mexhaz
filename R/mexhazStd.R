@@ -651,7 +651,6 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
     if (mode=="fit"){
         ## Launching the optimisation procedure
         if (fnoptim=="nlm"){
-            time0 <- as.numeric(proc.time()[3])
             mod.lik <- nlm(LL.Tot,init,iterlim=iterlim,hessian=TRUE,print.level=print.level,...)
             param.fin <- mod.lik$estimate
             code.fin <- mod.lik$code
@@ -660,7 +659,6 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
             iterations <- mod.lik$iterations
         }
         else if (fnoptim=="optim"){
-            time0 <- as.numeric(proc.time()[3])
             mod.lik <- optim(init,LL.Tot,method=method,hessian=TRUE,...)
             param.fin <- mod.lik$par
             code.fin <- mod.lik$convergence

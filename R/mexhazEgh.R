@@ -881,7 +881,6 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
     }
 
     ## Launching the optimisation procedure
-    time0 <- as.numeric(proc.time()[3])
     if (mode=="fit"){
         mod.lik <- try(nlm(LL.Tot,init,iterlim=iterlim,print.level=print.level,gradtol=gradtol,check.analyticals=FALSE,...),silent=TRUE)
         if (class(mod.lik)[1]!="try-error"){

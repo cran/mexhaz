@@ -58,8 +58,6 @@ SEXP GaussProcNPH(SEXP vecnb, SEXP pDtau, SEXP lrowHXS, SEXP maxSXt, SEXP cst, S
   PROTECT(gproc = allocVector(VECSXP,ntest));
   nprotect += 1;
 
-  Rprintf("ntest vaut %d\n",ntest);
-  
   for (t=0; t<ntest; t++){
     
     PROTECT(gptemp = allocVector(REALSXP,ntime*(2+Keep)));

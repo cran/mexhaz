@@ -1,27 +1,27 @@
 \name{predict.mexhaz}
 \alias{predict.mexhaz}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{Predictions based on a mexhaz model}
-\description{
-  Function for predicting the (excess) hazard and the corresponding
-  (net) survival from a model fitted with the \code{mexhaz} function for
-  a particular vector of covariables. If the survival model was fitted
-  with an expected hazard (excess hazard model), the estimates obtained
-  are excess hazard and net survival estimates. Corresponding variance
-  estimates are based on the Delta Method or Monte Carlo simulation
-  (based on the assumption of multivariate normality of the model
-  parameter estimates). When the model includes a
-  random effect, predictions can be made for a particular cluster (using
-  the corresponding shrinkage estimate) or for the value 0 of the random
-  effect. This function allows the computation of the hazard and the
-  survival at one time point for several vectors of covariables or for
-  one vector of covariables at several time points.
-}
+\title{Predictions based on a mexhaz model} \description{ Function for
+predicting the (excess) hazard and the corresponding (net) survival from
+a model fitted with the \code{mexhaz} function for a particular vector
+of covariables. If the survival model was fitted with an expected hazard
+(excess hazard model), the estimates obtained are excess hazard and net
+survival estimates. Corresponding variance estimates are based on the
+Delta Method or Monte Carlo simulation (based on the assumption of
+multivariate normality of the model parameter estimates). This function
+allows the computation of the hazard and the survival at one time point
+for several vectors of covariables or for one vector of covariables at
+several time points. When the model includes a random effect, two types
+of predictions can be made: (i) marginal predictions (obtained by integration over
+the random effect distribution) or (ii) conditional predictions either
+for a particular cluster (using the corresponding shrinkage estimate) or
+for the value 0 of the random effect.}
 
-\usage{\method{predict}{mexhaz}(object, time.pts, data.val = data.frame(.NotUsed=NA),
-cluster=NULL, conf.int=c("delta","simul","none"), level=0.95,
-delta.type.h=c("log", "plain"), delta.type.s=c("log-log", "log",
-"plain"), nb.sim = 10000, include.gradient=FALSE, ...)
+\usage{\method{predict}{mexhaz}(object, time.pts, data.val =
+data.frame(.NotUsed=NA), cluster = NULL, marginal = FALSE, conf.int =
+c("delta","simul","none"), level=0.95, delta.type.h = c("log", "plain"),
+delta.type.s = c("log-log", "log", "plain"), nb.sim = 10000,
+include.gradient = FALSE, ...)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -42,6 +42,15 @@ delta.type.h=c("log", "plain"), delta.type.s=c("log-log", "log",
     Hobert. This argument is not used if the model is a fixed effect
     model. The default value is \code{NULL}: this corresponds to
     prediction for the value 0 of the random effect.}
+  \item{marginal}{logical value controlling the type of predictions
+    returned by the function when the model includes a random
+    intercept. When \code{TRUE}, marginal predictions are computed. The
+    marginal survival is obtained by integrating the predicted survival over the
+    distribution of the random effect. The marginal hazard rate is
+    obtained as the opposite of the marginal time
+    derivative of the survival divided by the marginal survival. When
+    \code{FALSE} (default value), conditional predictions depending on the
+    value of the \code{cluster} argument are calculated.}
   \item{conf.int}{method to be used to compute confidence
     limits. Selection can be made between the following options:
     \code{"delta"} for the Delta Method (default value);
@@ -106,12 +115,15 @@ delta.type.h=c("log", "plain"), delta.type.s=c("log-log", "log",
   \code{conf.int="delta"} and \code{include.gradient=TRUE}.}
 \item{vcov}{a matrix corresponding to the covariance matrix used to
   compute the confidence intervals.}
-\item{type}{the type of predictions produced. Can take the value
-    \code{"multitime"} (computation of the hazard and the survival at
+\item{type}{this item can take the value
+    \code{multitime} (computation of the hazard and the survival at
   at several time points for one vector of covariables) or
     \code{multiobs} (computation of the hazard and the survival at
-  at one time point for several vectors of covariables). This value is
-    used by \code{plot.predMexhaz} and \code{points.predMexhaz}.}
+  at one time point for several vectors of covariables). It is
+  used by \code{plot.predMexhaz} and \code{points.predMexhaz}.}
+\item{type.me}{the type of predictions produced in case of a model
+  including a random intercept. Can take the values \code{conditional}
+  or \code{marginal}.}
 \item{ci.method}{the method used to compute confidence limits.}
 \item{level}{level of confidence used to compute confidence limits.}
 \item{delta.type}{type of confidence limits for the hazard and the

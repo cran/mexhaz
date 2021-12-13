@@ -1,89 +1,96 @@
+Changes in version 2.1
+
+  o Implemented marginal predictions for models including a random intercept.
+
+  o Implemented the correct Wald test for the model coefficients.
+  
+  o Corrected a problem of scope with the update.mexhaz() function when used inside another function.
+  
 Changes in Version 2.0
 
-  For the fixed effect (overall and excess) hazard model as well as for the random effect hazard model (overall only), the default optimisation procedure is Newton-Raphson (from nlm) based on the analytic gradient and Hessian. This greatly improves computational time especially for large datasets. The previous behaviour of the mexhaz function can still be obtained by setting the argument 'exactGradHess' to FALSE.
-  The gradient and Hessian of the likelihood evaluated at the estimated parameters are now returned in the mexhaz object.
+  o For the fixed effect (overall and excess) hazard model as well as for the random effect hazard model (overall only), the default optimisation procedure is Newton-Raphson (from nlm) based on the analytic gradient and Hessian. This greatly improves computational time especially for large datasets. The previous behaviour of the mexhaz function can still be obtained by setting the argument 'exactGradHess' to FALSE.
+  
+  o The gradient and Hessian of the likelihood evaluated at the estimated parameters are now returned in the mexhaz object.
 
 Changes in Version 1.11
   
-  Added a reference to the JSS article.
-  Made a small correction in the update() function.
+  o Added a reference to the JSS article.
+  
+  o Made a small correction in the update() function.
 
 Changes in Version 1.10
   
-  Corrected a memory issue in the C source code.
+  o Corrected a memory issue in the C source code.
 
 Changes in Version 1.9
   
-  Changed the way the Weibull hazard and cumulative hazard rate are
+  o Changed the way the Weibull hazard and cumulative hazard rate are
   calculated: now, the mexhaz() and predict.mexhaz() functions
   directly call a C function, like for the other hazard rates.
 
-  Added a vignette describing the package use based on an article accepted
+  o Added a vignette describing the package use based on an article accepted
   for publication in JSS.
 
 Changes in Version 1.8
   
-  Fixed a bug in the predict.mexhaz() function that resulted in
+  o Fixed a bug in the predict.mexhaz() function that resulted in
   missing values for the variances of the logarithm of the hazard and
   of the cumulative hazard when confidence intervals are estimated by
   Monte Carlo simulations (Thanks Johann!).
 
-  Initial values for the logarithm of the parameters of the Weibull
+  o Initial values for the logarithm of the parameters of the Weibull
   hazard set to 0.1.
 
 Changes in Version 1.7
   
-  Implemented the correct version of the shared frailty model for left
+  o Implemented the correct version of the shared frailty model for left
   truncated data.
 
-  Default value of argument 'verbose' set to 0.
+  o Default value of argument 'verbose' set to 0.
 
-  Initial values for the parameters of the Weibull hazard set to 0.1.
-
+  o Initial values for the parameters of the Weibull hazard set to 0.1.
 
 Changes in Version 1.6
   
-  Fixed a bug in the mexhaz() function that resulted in an error of
+  o Fixed a bug in the mexhaz() function that resulted in an error of
   the function when the event variable was 1 for everyone.
 
-  Fixed a bug in the summary() method for objects of class 'mexhaz'.
+  o Fixed a bug in the summary() method for objects of class 'mexhaz'.
 
-  Fixed a bug in the update() method for objects of class 'mexhaz'
+  o Fixed a bug in the update() method for objects of class 'mexhaz'
   (provided a default value for the degree of the B-spline).
 
-  Modified the mexhaz() function so that the counting process input
+  o Modified the mexhaz() function so that the counting process input
   style can be used when fitting a random effect model (stop() changed
   into a warning()).
 
-  Added the method lines() for objects of class 'predMexhaz' and
+  o Added the method lines() for objects of class 'predMexhaz' and
   changed the default plotting type for the points() method.
-
 
 Changes in Version 1.5
   
-  Fixed a bug in the mexhaz() function that resulted in an error of
+  o Fixed a bug in the mexhaz() function that resulted in an error of
   the function when the covariance matrix could not be estimated. Now,
   the function runs until completion and produces a covariance matrix
   filled with NA values in case it could not be estimated.
 
-  Added methods fixef() and vcov() for objects of class 'mexhaz'.
+  o Added methods fixef() and vcov() for objects of class 'mexhaz'.
 
-  Update of the summary() method for objects of class 'mexhaz' and
+  o Update of the summary() method for objects of class 'mexhaz' and
   addition of a print() methods for objects of class 'summary.mexhaz'.
-
 
 Changes in Version 1.4
   
-  Correction of a mistake in the predict.mexhaz() function that
+  o Correction of a mistake in the predict.mexhaz() function that
   resulted in providing the limits of the confidence intervals for
   survival when delta.type.s="log" (CI for survival based on a
   Wald-type CI for the cumulative hazard) in the wrong order.
 
-  Change in the parametrisation of the Weibull hazard (the
+  o Change in the parametrisation of the Weibull hazard (the
   coefficients now correspond to the logarithm of the parameters of
   the Weibull distribution, thus allowing unconstrained optimisation).
 
-  Change in the parametrisation of the coefficient related to the
+  o Change in the parametrisation of the coefficient related to the
   random effect (the coefficient now corresponds to the logarithm of
   the standard deviation of the distribution of the random effect,
   allowing unconstrained optimisation and consistent with future
@@ -91,7 +98,7 @@ Changes in Version 1.4
 
 Changes in Version 1.3
   
-  Correction of an off-by-one error in the C functions used to handle
+  o Correction of an off-by-one error in the C functions used to handle
   hazards described by the logarithm of a restricted cubic spline that
   may cause an R session crash.
 
@@ -158,8 +165,6 @@ Changes in Version 1.2
   o A bug that hampered model convergence for big datasets has been
   corrected in the 'FrailtyAdapt.c' file.
 
-
-
 Changes in Version 1.1
 
   Majors changes (no backward compatibility)! See help files for a
@@ -204,7 +209,6 @@ Changes in Version 1.1
   facilitate the application of S3 methods. The object returned by the
   'predMexhaz' function is a list of class 'predMexhaz'.
         
-
   o Methods print(), plot() and points() for an object of class
   'predMexhaz' have been added.
     

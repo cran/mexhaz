@@ -5,8 +5,8 @@ print.summary.mexhaz <- function(x, ...){
         PH <- x$coefficients[x$idx.ph,1]
         sePH <- x$coefficients[x$idx.ph,2]
         HR <- exp(PH)
-        ci.lower <- exp(PH+qt(0.025,df=x$df)*sePH)
-        ci.upper <- exp(PH+qt(0.975,df=x$df)*sePH)
+        ci.lower <- exp(PH+qnorm(0.025)*sePH)
+        ci.upper <- exp(PH+qnorm(0.975)*sePH)
         HRTab <- cbind(Coef=round(PH,4),HR=round(HR,4),CI.lower=round(ci.lower,4),CI.upper=round(ci.upper,4))
         ishr <- 1
     }

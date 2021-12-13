@@ -10,11 +10,11 @@ as starting values for the corresponding parameters of the new model.
 }
 
 \usage{\method{update}{mexhaz}(object, formula, data, expected = NULL,
-base = c("weibull","exp.bs", "exp.ns", "pw.cst"), degree = 3, knots =
-NULL, bound = NULL, n.gleg = 20, init = NULL, random = NULL, n.aghq =
-10, fnoptim = c("nlm", "optim"), verbose = 0, method = "Nelder-Mead",
-iterlim=10000, numHess=FALSE, print.level=1, exactGradHess = TRUE,
-gradtol = ifelse(exactGradHess, 1e-8, 1e-6), ...)}
+base = NULL, degree = 3, knots = NULL, bound = NULL, n.gleg = 20, init =
+NULL, random = NULL, n.aghq = 10, fnoptim = c("nlm", "optim"), verbose =
+0, method = "Nelder-Mead", iterlim=10000, numHess=FALSE, print.level=1,
+exactGradHess = TRUE, gradtol = ifelse(exactGradHess, 1e-8, 1e-6),
+envir = parent.frame(), ...)}
 
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -197,6 +197,10 @@ logical value allowing the user to choose between the Hessian returned
     to the tolerance at which the scaled gradient is considered close
     enough to zero to terminate the algorithm. The default value depends
     on the value of the argument \code{exactGradHess}. 
+  }
+  \item{envir}{
+    environment in which the objects' names given as arguments to the updated
+    model are to be found.
   }
   \item{\dots}{
 represents additional parameters directly passed to \code{nlm} or
