@@ -1,3 +1,11 @@
+Changes in version 2.2
+
+  o Corrected bugs in the marginSurvhaz, predict.mexhaz, and mexhazEgh functions.
+
+  o Added a function to compute hazard ratios and risk ratios.
+
+  o Added a function to compute direct adjusted survival estimates.
+
 Changes in version 2.1
 
   o Implemented marginal predictions for models including a random intercept.

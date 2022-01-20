@@ -9,12 +9,14 @@ provided, the function uses the estimated values of the existing model
 as starting values for the corresponding parameters of the new model.
 }
 
-\usage{\method{update}{mexhaz}(object, formula, data, expected = NULL,
-base = NULL, degree = 3, knots = NULL, bound = NULL, n.gleg = 20, init =
-NULL, random = NULL, n.aghq = 10, fnoptim = c("nlm", "optim"), verbose =
-0, method = "Nelder-Mead", iterlim=10000, numHess=FALSE, print.level=1,
-exactGradHess = TRUE, gradtol = ifelse(exactGradHess, 1e-8, 1e-6),
-envir = parent.frame(), ...)}
+\usage{
+\method{update}{mexhaz}(object, formula, data, expected = NULL, base = NULL, 
+degree = 3, knots = NULL, bound = NULL, n.gleg = 20, init = NULL,
+random = NULL, n.aghq = 10, fnoptim = c("nlm", "optim"), 
+verbose = 0, method = "Nelder-Mead", iterlim = 10000, numHess = FALSE,
+print.level = 1, exactGradHess = TRUE, gradtol = 
+ifelse(exactGradHess, 1e-8, 1e-6), envir = parent.frame(), ...)
+}
 
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -32,7 +34,7 @@ modelled with time-dependent effects, separate these variables inside the
 
 In case \code{time} takes the value 0 for some observations when data
 are entered in the right censored style, it is
-assumed that these observations refer to events/censoring that occurred
+assumed that these observations refer to events (or censoring) that occurred
 on the first day of follow-up. Consequently, a value of 1/730.5 (half a
 day) is substituted in order to make computations possible. However, it
 should be stressed that this is just a convention and that it does not
@@ -58,7 +60,7 @@ described by the exponential of a B-spline (only B-splines of degree 1,
 2 or 3 are accepted), \code{"exp.ns"} for a hazard described by the
 exponential of a restricted cubic B-spline (also called 'natural
 spline'), \code{"pw.cst"} for a piecewise constant hazard. By default,
-\code{base="weibull"}.  }
+\code{base=NULL}.  }
 
 \item{degree}{
   if \code{base="exp.bs"}, \code{degree} represents the
@@ -81,13 +83,13 @@ constant hazard over the whole follow-up period if
   B-spline basis requires that boundary knots be given. The \code{bound}
   argument allows the user to specify these boundary knots. If
   \code{base="exp.bs"}, the interval defined by the boundary knots must
-  at least include the interval \code{c(0,max(time))} (otherwise, there
+  at least include the interval c(0,max(time)) (otherwise, there
   could be problems with ill-conditioned bases). If
   \code{base="exp.ns"}, the boundary knots correspond to the knots
   beyond which the spline is contrained to be linear (in that case, the
-  boundary knots can be values contained in \code{c(0,max(time))}). By
+  boundary knots can be values contained in c(0,max(time))). By
   default, the boundary knots are set to
-  \code{c(0,max(time))}.
+  c(0,max(time)).
 }
   \item{n.gleg}{
 if \code{base="exp.bs"} and degree is equal to 2 or 3, or if
@@ -133,7 +135,7 @@ between quotes), representing the cluster membership. By default,
 \code{random=NULL} which means that the function fits a fixed effects model.
 }
   \item{n.aghq}{
-number of quadrature points to be used for estimating the
+number of quadrature points used for estimating the
 cluster-specific marginal likelihoods by adaptive Gauss-Hermite
 quadrature. By default, \code{n.aghq=10}.
 }
@@ -196,12 +198,9 @@ logical value allowing the user to choose between the Hessian returned
     this argument is only used if \code{fnoptim="nlm"}. It corresponds
     to the tolerance at which the scaled gradient is considered close
     enough to zero to terminate the algorithm. The default value depends
-    on the value of the argument \code{exactGradHess}. 
-  }
-  \item{envir}{
-    environment in which the objects' names given as arguments to the updated
-    model are to be found.
-  }
+    on the value of the argument \code{exactGradHess}.}
+  \item{envir}{environment in which the objects' names given as arguments to the updated
+model are to be found.}
   \item{\dots}{
 represents additional parameters directly passed to \code{nlm} or
 \code{optim} to control the optimisation process.

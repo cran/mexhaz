@@ -1,4 +1,4 @@
-marginSurvhaz <- function(lA,B,C,dlA,dC,s2,n.aghq=100,grad=FALSE){
+marginSurvhaz <- function(lA,B,C,dlA=NULL,dC=NULL,s2,n.aghq=100,grad=FALSE){
 
     gq <- gauss.quad(n=n.aghq,kind="hermite")
     x.H <- gq$nodes

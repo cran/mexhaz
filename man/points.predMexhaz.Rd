@@ -6,8 +6,9 @@
   the predicted (excess) hazard or (net) survival based on a \code{predMexhaz} object.}
 
 \usage{
-\method{points}{predMexhaz}(x, which=c("surv", "hazard"), conf.int=TRUE,
-lty.pe="solid", lty.ci="dashed", ...)}
+\method{points}{predMexhaz}(x, which = c("surv", "hazard"), conf.int =
+TRUE, lty.pe = "solid", lty.ci = "dashed", ...)
+}
 
 %- maybe also 'usage' for other objects documented here.
 \arguments{

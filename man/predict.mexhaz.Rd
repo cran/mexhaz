@@ -1,27 +1,28 @@
 \name{predict.mexhaz}
 \alias{predict.mexhaz}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{Predictions based on a mexhaz model} \description{ Function for
-predicting the (excess) hazard and the corresponding (net) survival from
-a model fitted with the \code{mexhaz} function for a particular vector
-of covariables. If the survival model was fitted with an expected hazard
-(excess hazard model), the estimates obtained are excess hazard and net
-survival estimates. Corresponding variance estimates are based on the
-Delta Method or Monte Carlo simulation (based on the assumption of
-multivariate normality of the model parameter estimates). This function
-allows the computation of the hazard and the survival at one time point
-for several vectors of covariables or for one vector of covariables at
-several time points. When the model includes a random effect, two types
-of predictions can be made: (i) marginal predictions (obtained by integration over
-the random effect distribution) or (ii) conditional predictions either
-for a particular cluster (using the corresponding shrinkage estimate) or
-for the value 0 of the random effect.}
+\title{Predictions based on a mexhaz model}
+\description{Function for predicting the (excess) hazard and the
+corresponding (net) survival from a model fitted with the \code{mexhaz}
+function for a particular vector of covariates. If the survival model
+was fitted with an expected hazard (excess hazard model), the estimates
+obtained are excess hazard and net survival estimates. Corresponding
+variance estimates are based on the Delta Method or Monte Carlo
+simulation (based on the assumption of multivariate normality of the
+model parameter estimates). This function allows the computation of the
+hazard and the survival at one time point for several vectors of
+covariates or for one vector of covariates at several time
+points. When the model includes a random effect, two types of
+predictions can be made: (i) marginal predictions (obtained by
+integration over the random effect distribution) or (ii) conditional
+predictions either for a particular cluster (using the corresponding
+shrinkage estimate) or for the value 0 of the random effect.}
 
-\usage{\method{predict}{mexhaz}(object, time.pts, data.val =
-data.frame(.NotUsed=NA), cluster = NULL, marginal = FALSE, conf.int =
-c("delta","simul","none"), level=0.95, delta.type.h = c("log", "plain"),
-delta.type.s = c("log-log", "log", "plain"), nb.sim = 10000,
-include.gradient = FALSE, ...)
+\usage{
+\method{predict}{mexhaz}(object, time.pts, data.val = data.frame(.NotUsed = NA),
+cluster = NULL, marginal = FALSE, conf.int = c("delta", "simul", "none"),
+level = 0.95, delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
+"log", "plain"), nb.sim = 10000, keep.sim = FALSE, include.gradient = FALSE, ...)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -33,15 +34,21 @@ include.gradient = FALSE, ...)
     the maximum follow-up time on which the model estimation was based
     are discarded.}
   \item{data.val}{a \code{data.frame} containing the values of the
-    covariables at which predictions should be calculated.}
-  \item{cluster}{a single number or character string corresponding to
-    the name of the cluster for which predictions should be
-    calculated. In that case, standard errors of prediction are obtained
-    with the approximation of the conditional mean squared error of
-    prediction (without the second-order bias correction term) described in Booth and
-    Hobert. This argument is not used if the model is a fixed effect
+    covariates at which predictions should be calculated.}
+  \item{cluster}{a vector of size either one or the number of
+    observations in \code{data.val} corresponding to the cluster(s) for
+    which conditional predictions should be calculated. In the first
+    case, conditional predictions for all observations are obtained for
+    the same cluster, while in the second case, conditional predictions
+    can be made for a different cluster for each observation in
+    \code{data.val}. Standard errors of prediction are obtained with the
+    approximation of the conditional mean squared error of prediction
+    (without the second-order bias correction term) described in Booth
+    and Hobert. This argument is not used if the model is a fixed effect
     model. The default value is \code{NULL}: this corresponds to
-    prediction for the value 0 of the random effect.}
+    marginal predictions (if \code{marginal} is set to \code{TRUE}, the preferred
+    option), or to conditional predictions for the value 0 of the random
+    effect (if \code{marginal} is set to \code{FALSE}).}
   \item{marginal}{logical value controlling the type of predictions
     returned by the function when the model includes a random
     intercept. When \code{TRUE}, marginal predictions are computed. The
@@ -57,32 +64,37 @@ include.gradient = FALSE, ...)
     \code{"simul"} for Monte Carlo simulations (can be time-consuming,
     especially for models using B-splines for the logarithm of the
     baseline hazard);
-    \code{"none"} indicates absence of confidence limits estimation.
-}
-  \item{level}{a number in (0,1) specifying the level of confidence for computing the confidence
-    intervals of the hazard and the survival. By default,
-    \code{level=0.95}.}
+    \code{"none"} indicates absence of confidence limits estimation.}
+  \item{level}{a number in (0,1) specifying the level of confidence for
+  computing the confidence intervals of the hazard and the survival. The
+  default value is set to \code{0.95}.}
     \item{delta.type.h}{type of confidence limits for the hazard when
-      using the Delta Method. If
-      \code{delta.type.h="log"} (default value), the confidence limits are based on a Wald-type confidence interval for the
-      logarithm of the hazard, otherwise they are based directly on a
-      Wald-type CI for the hazard.}
+      using the Delta Method. With the default value (\code{"log"}), the
+      confidence limits are based on a Wald-type confidence interval for
+      the logarithm of the hazard, otherwise they are based directly on
+      a Wald-type CI for the hazard.}
     \item{delta.type.s}{type of confidence limits for the survival when
-      using the Delta Method. If
-      \code{delta.type.s="log-log"} (default value), the confidence limits are based on a Wald-type confidence interval for the
-      logarithm of the cumulative hazard; if \code{delta.type.s="log"},
-      they are based on a Wald-type CI for the
+      using the Delta Method. With the default value (\code{"log-log"}),
+      the confidence limits are based on a Wald-type confidence interval
+      for the logarithm of the cumulative hazard; when the argument is
+      set to \code{"log"}, they are based on a Wald-type CI for the
       cumulative hazard; otherwise they are based directly on a
       Wald-type CI for the survival.}
   \item{include.gradient}{logical value allowing the function to return
   the components of the gradient of the logarithm of the hazard and of
   the logarithm of the cumulative hazard for each prediction. This
-  argument is used only if \code{conf.int="delta"}. The default value
-  is \code{FALSE}.}
+  argument is used only if \code{conf.int} is set to \code{"delta"}. The
+  default value is \code{FALSE}.}
   \item{nb.sim}{integer value representing the number of simulations
   used to estimate the confidence limits for the (excess) hazard
   and the (net) survival. This argument is used only if
-  \code{conf.int="simul"}.}
+  \code{conf.int} is set to \code{"simul"}.}
+  \item{keep.sim}{logical value determining if the simulated hazard and
+    survival values should be returned (only used when
+    \code{conf.int} is set to \code{"simul"}). These simulated values can be used by the
+    \code{riskfunc} function to compute simulation-based confidence
+    intervals for hazard ratios / risk ratios. The default value is set
+    to \code{FALSE}.}
 \item{\dots}{for potential additional parameters.}
 }
 %\details{
@@ -90,36 +102,38 @@ include.gradient = FALSE, ...)
 %}
 \value{
   An object of class \code{predMexhaz} that can be used by
-  the functions \code{plot.predMexhaz}, \code{points.predMexhaz} and \code{lines.predMexhaz} to produce graphics of the (excess) hazard and
+  the function \code{plot.predMexhaz} to produce graphics of the (excess) hazard and
   the (net) survival. It contains the following elements:
   \item{call}{the \code{mexhaz} function call on which the model is based.}
 \item{results}{a \code{data.frame} consisting of: the time
   points at which the (excess) hazard and the (net) survival have been
-  calculated; the values of the covariables used to estimate the
+  calculated; the values of the covariates used to estimate the
   (excess) hazard and the (net) survival; the
   (excess) hazard values with their confidence limits; and the (net) survival values with their confidence limits.}
 \item{variances}{a \code{data.frame} consisting of two columns: the
   variance of the logarithm of the (excess) hazard and the variance of
   the (excess) cumulative hazard for each time points or each
-  vector of covariables. The object \code{variances} is produced only when
-  \code{conf.int="delta"}.}
+  vector of covariates. The object \code{variances} is produced only when
+  \code{conf.int} is set to \code{"delta"}.}
 \item{grad.loghaz}{a \code{data.frame} consisting of the components of
   the gradient of the logarithm of the (excess) hazard for each time points or each
-  vector of covariables. The number of columns corresponds to the number
+  vector of covariates. The number of columns corresponds to the number
   of model parameters. This object is produced only when
-  \code{conf.int="delta"} and \code{include.gradient=TRUE}.}
+  \code{conf.int} is set to \code{"delta"} and \code{include.gradient}
+  to \code{TRUE}.}
 \item{grad.logcum}{a \code{data.frame} consisting of the components of
   the gradient of the logarithm of the (excess) cumulative hazard for each time points or each
-  vector of covariables. The number of columns corresponds to the number
+  vector of covariates. The number of columns corresponds to the number
   of model parameters. This object is produced only when
-  \code{conf.int="delta"} and \code{include.gradient=TRUE}.}
+  \code{conf.int} is set to \code{"delta"} and \code{include.gradient}
+  to \code{TRUE}.}
 \item{vcov}{a matrix corresponding to the covariance matrix used to
   compute the confidence intervals.}
 \item{type}{this item can take the value
     \code{multitime} (computation of the hazard and the survival at
-  at several time points for one vector of covariables) or
+  at several time points for one vector of covariates) or
     \code{multiobs} (computation of the hazard and the survival at
-  at one time point for several vectors of covariables). It is
+  at one time point for several vectors of covariates). It is
   used by \code{plot.predMexhaz} and \code{points.predMexhaz}.}
 \item{type.me}{the type of predictions produced in case of a model
   including a random intercept. Can take the values \code{conditional}
@@ -129,7 +143,13 @@ include.gradient = FALSE, ...)
 \item{delta.type}{type of confidence limits for the hazard and the
   survival when using the Delta Method.}
 \item{nb.sim}{number of simulations used to estimate the confidence
-  limits when \code{ci.method = "simul"}.}
+  limits when \code{ci.method} is set to \code{"simul"}.}
+\item{sim.haz}{matrix containing the simulated hazards (each column
+  representing a simulated vector of values); only returned when
+  \code{keep.sim} is set to \code{TRUE}.}
+\item{sim.surv}{matrix containing the simulated survival probabilities (each column
+  representing a simulated vector of values); only returned when
+  \code{keep.sim} is set to \code{TRUE}.}
 }
 \references{Charvat H, Remontet L, Bossard N, Roche L, Dejardin O,
   Rachet B, Launoy G, Belot A; CENSUR Working Survival Group. A
@@ -149,7 +169,8 @@ Hadrien Charvat, Aurelien Belot
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
-\code{\link{print.predMexhaz}}, \code{\link{plot.predMexhaz}}, \code{\link{points.predMexhaz}}
+  \code{\link{print.predMexhaz}}, \code{\link{plot.predMexhaz}},
+  \code{\link{points.predMexhaz}}, \code{\link{lines.predMexhaz}}
 }
 
 \examples{
@@ -157,8 +178,9 @@ Hadrien Charvat, Aurelien Belot
 data(simdatn1)
 
 ## Fit of a fixed-effect hazard model, with the baseline hazard
-## described by a linear B-spline with two knots at 1 and 5 year and with
-## effects of age (agecr), deprivation index (depindex) and sex (IsexH)
+## described by a linear B-spline with two knots at 1 and 5 year and
+## with effects of age (agecr), deprivation index (depindex) and sex
+## (IsexH)
 
 Mod_bs1_2 <- mexhaz(formula=Surv(time=timesurv,
 event=vstat)~agecr+depindex+IsexH, data=simdatn1, base="exp.bs",
@@ -173,7 +195,9 @@ Pred_Modbs1_2B <- predict(Mod_bs1_2, time.pts=10,
 data.val=data.frame(agecr=c(-0.2,-0.1,0), depindex=c(0.5,0.5,0.5),
 IsexH=c(1,1,1)))
 
-## Prediction for all individuals of the study population at one time point
+## Prediction for all individuals of the study population
+## at one time point
+
 Pred_Modbs1_2C <- predict(Mod_bs1_2, time.pts=10,
 data.val=simdatn1)
 
@@ -188,7 +212,7 @@ data.val=simdatn1)
 # knots=c(1,5), expected="popmrate", random="clust", verbose=1000)
 
 ## Prediction at several time points for an individual in cluster 15
-## with a specific vector of covariables
+## with a specific vector of covariates
 # Pred_Modbs3_2A <- predict(Mod_bs3_2mix,
 # time.pts=seq(0.1,10,by=0.1), data.val=data.frame(agecr=0.2, IsexH=1),
 # cluster=15)

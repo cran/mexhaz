@@ -1,7 +1,7 @@
 plot.predMexhaz <- function(x,which=c("surv","hazard"),conf.int=TRUE,lty.pe="solid",lty.ci="dashed",...){
     which <- match.arg(which)
     if (x$type=="multiobs"){
-        stop("The 'plot' function applies only to predictions realised on a single vector of covariables.")
+        stop("The 'plot.predMexhaz' function applies only to predictions realised on a single vector of covariates.")
     }
     time.pts <- x$results$time.pts
     if (which=="hazard"){

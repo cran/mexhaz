@@ -1,4 +1,8 @@
-predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = NA), cluster = NULL, marginal = FALSE, conf.int = c("delta", "simul", "none"), level = 0.95, delta.type.h = c("log", "plain"), delta.type.s = c("log-log", "log", "plain"), nb.sim = 10000, include.gradient = FALSE, ...)
+predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = NA),
+    cluster = NULL, marginal = FALSE, conf.int = c("delta", "simul", "none"), level = 0.95,
+    delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
+        "log", "plain"), nb.sim = 10000, keep.sim = FALSE, include.gradient = FALSE,
+    ...)
 {
     time0 <- as.numeric(proc.time()[3])
     conf.int <- match.arg(conf.int)
@@ -25,22 +29,37 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
         if (is.na(object$random)) {
             stop("The 'cluster' argument cannot be used with a fixed effects model...")
         }
-        if (length(cluster) != 1) {
-            stop("The 'cluster' argument must be a single number or character string corresponding to the name of the cluster for which predictions are wanted...")
+        if (length(cluster) != 1 & length(cluster) != dim(data.val)[1]) {
+            stop("The 'cluster' argument must be either a single number or character string corresponding to the name of the cluster for which predictions are wanted, or a vector of length the number of rows in data.val...")
         }
         if (marginal == TRUE) {
             stop("The 'cluster' argument cannot be used when marginal predictions are requested...")
         }
-        Idx.mh <- which(object$mu.hat$cluster == cluster)
-        if (length(Idx.mh) != 1) {
-            stop(paste("There is no cluster named '", cluster,
-                "'...", sep = ""))
+        Idx.nmh <- which(!cluster%in%object$mu.hat$cluster)
+        if (length(Idx.nmh) > 0) {
+            stop("Some elements of the 'cluster' argument do not correspond to existing clusters...")
         }
-        coef <- c(coef[-n.par], object$mu.hat[Idx.mh, ]$mu.hat)
-        vcov1 <- cbind(vcov[-n.par, -n.par], t(object$vcov.fix.mu.hat[Idx.mh,
-            , drop = FALSE]))
-        vcov <- rbind(vcov1, c(object$vcov.fix.mu.hat[Idx.mh,
-            ], object$var.mu.hat[Idx.mh, Idx.mh]))
+        if (length(cluster) == 1){
+            Idx.mh <- which(object$mu.hat$cluster == cluster)
+            mat.mu <- 1
+            names.mat.mu <- paste0("cluster",cluster)
+            le.mu <- 1
+            names.tot <- c(names(coef[-n.par]),names.mat.mu)
+            coef <- c(coef[-n.par], object$mu.hat[Idx.mh, ]$mu.hat)
+            vcov1 <- cbind(vcov[-n.par, -n.par], t(object$vcov.fix.mu.hat[Idx.mh, , drop = FALSE]))
+            vcov <- rbind(vcov1, c(object$vcov.fix.mu.hat[Idx.mh, ], object$var.mu.hat[Idx.mh, Idx.mh]))
+            colnames(vcov) <- rownames(vcov) <- names.tot
+        }
+        else {
+            mat.mu <- as.matrix(t(sapply(cluster,function(x){1*(object$mu.hat$cluster==x)}))) ## model.matrix(~-1+as.factor(cluster))
+            names.mat.mu <- paste0("cluster",object$mu.hat$cluster)
+            le.mu <- dim(mat.mu)[2]
+            names.tot <- c(names(coef[-n.par]),names.mat.mu)
+            coef <- c(coef[-n.par], object$mu.hat$mu.hat)
+            vcov1 <- cbind(vcov[-n.par, -n.par], t(object$vcov.fix.mu.hat))
+            vcov <- rbind(vcov1, cbind(object$vcov.fix.mu.hat, object$var.mu.hat))
+            colnames(vcov) <- rownames(vcov) <- names.tot
+        }
     }
     if (marginal == TRUE & is.na(object$random)){
         marginal <- FALSE
@@ -194,8 +213,8 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
         }
     }
     HazardMarg <- function(loghaz,cumhaz,sigma2){
-        margSurv <- marginSurvhaz(0,0,cumhaz,sigma2)[[1]] ## Marginal survival
-        margDSurv <- marginSurvhaz(loghaz,1,cumhaz,sigma2)[[1]] ## Minus marginal time-derivative of survival
+        margSurv <- marginSurvhaz(lA=0,B=0,C=cumhaz,s2=sigma2)[[1]] ## Marginal survival
+        margDSurv <- marginSurvhaz(lA=loghaz,B=1,C=cumhaz,s2=sigma2)[[1]] ## Minus marginal time-derivative of survival
         margHaz <- margDSurv/margSurv
         return(data.frame(LogHaz=log(margHaz),HazCum=-log(margSurv)))
     }
@@ -222,6 +241,8 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
     Var.Log.Cum <- NA
     Grad.LH <- NA
     Grad.LC <- NA
+    Sim.Haz <- NA
+    Sim.Surv <- NA
     TransfDeg <- function(vec.knots, deg) {
         if (deg == 1) {
             Le <- length(vec.knots)
@@ -310,12 +331,6 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
         else {
             which.td <- 2
         }
-        if (!is.null(cluster)) {
-            fix.new <- as.data.frame(fix.new)
-            fix.new$cluster <- 1
-            fix.new <- as.matrix(fix.new)
-            which.ntd <- c(which.ntd, n.par)
-        }
         fix.new <- fix.new[, -1, drop = FALSE]
         nph.new <- nph.new[, -1, drop = FALSE]
     }
@@ -397,12 +412,14 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
         else {
             which.td <- c(n.inter + 1:n.td.base)
         }
-        if (!is.null(cluster)) {
-            fix.new <- as.data.frame(fix.new)
-            fix.new$cluster <- 1
-            fix.new <- as.matrix(fix.new)
-            which.ntd <- c(which.ntd, n.par)
-        }
+    }
+    if (!is.null(cluster)){
+        le.par <- length(which.td)+length(which.ntd)
+        fix.new <- cbind(fix.new,mat.mu)
+        which.ntd <- c(which.ntd, (le.par+1):(le.par+le.mu))
+        names.test <- names(Test)
+        Test <- cbind(Test,mat.mu)
+        names(Test) <- c(names.test,names.mat.mu)
     }
     fix.new <- t(fix.new)
     nph.new <- t(nph.new)
@@ -443,6 +460,7 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
             colnames(Grad.LC) <- colnames(varcov)
         }
         if (marginal == TRUE){
+            varcov <- vcov
             temp.VM <- DeltaMarg(temp.H$LogHaz,temp.H$HazCum,Grad.LH,Grad.LC,exp(2*coef[n.par]),vcov)
             Var.Log.Haz <- temp.VM$VarLogHaz
             Var.Log.Cum <- temp.VM$VarLogCum
@@ -519,6 +537,10 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
         BSup1 <- apply(Res1, 1, quantile, prob = 0.975)
         BInf2 <- apply(Res2, 1, quantile, prob = 0.025)
         BSup2 <- apply(Res2, 1, quantile, prob = 0.975)
+        if (keep.sim == TRUE){
+            Sim.Haz <- Res1
+            Sim.Surv <- Res2
+        }
     }
     variances <- NA
     df.ct <- NA
@@ -534,14 +556,12 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
     else {
         res1 <- data.frame(hazard = lambda, surv = Surv)
     }
-    if (!is.null(cluster)) {
-        Test <- cbind(Test, cluster)
-    }
     res.PS <- list(call = call, results = cbind(time.pts, Test,
         res1), variances = variances, grad.loghaz = Grad.LH,
         grad.logcum = Grad.LC, vcov = varcov, type = typepred,
         type.me = type.me, ci.method = conf.int, level = level,
-        delta.type = df.ct, nb.sim = ifelse(conf.int == "simul", nb.sim, NA))
+        delta.type = df.ct, nb.sim = ifelse(conf.int == "simul", nb.sim, NA),
+        sim.haz = Sim.Haz, sim.surv = Sim.Surv)
     res.PS <- res.PS[!is.na(res.PS)]
     class(res.PS) <- "predMexhaz"
     res.PS

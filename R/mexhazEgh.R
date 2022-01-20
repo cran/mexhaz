@@ -741,7 +741,7 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
                     Theta*dTP.di.PT.di*sumHB[,5] +
                     Theta^2*dPsiPsi.di*sumHB[,6] -
                     MyProd(dlSn.di,dlSn.di)
-                LL.Temp <- apply(d2F.di2+d2lSn.di2,2,sum)
+                LL.Temp <- apply(d2F.di2+d2lSn.di2[,order(IdxM)],2,sum)
                 hess <- Reorder(LL.Temp,Mat,IdxM)
 
                 if (Survtype=="counting"){
@@ -819,7 +819,7 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
                         Theta0*dTP0.di.PT0.di*sumHB0[,5] +
                         Theta0^2*dPsiPsi0.di*sumHB0[,6] -
                         MyProd(dlSn0.di,dlSn0.di)
-                    LL0.Temp <- apply(d2F0.di2+d2lSn0.di2,2,sum)
+                    LL0.Temp <- apply(d2F0.di2+d2lSn0.di2[,order(IdxM)],2,sum)
                     hess <- Reorder(LL.Temp-LL0.Temp,Mat,IdxM)
 
                 }
