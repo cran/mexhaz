@@ -1,3 +1,7 @@
+Changes in version 2.3
+
+  o Corrected a problem in the formula for the Hessian of the likelihood in the mexhazEgh function.
+
 Changes in version 2.2
 
   o Corrected bugs in the marginSurvhaz, predict.mexhaz, and mexhazEgh functions.

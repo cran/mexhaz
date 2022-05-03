@@ -648,12 +648,15 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
         IdxM1 <- IdxM[!IdxM%in%IdxM2]
         IdxM <- c(IdxM1,IdxM2)
     }
+    ordIdxM <- order(IdxM)
+    ord2IdxM <- order(ordIdxM)
 
     ## Function that actually computes the log-likelihood
     LL.Tot <- function(p.LT,mu.hat.LT=0,env=FALCenv){
 
         p.td <- p.LT[which.td]
         p.ntd <- p.LT[which.ntd]
+
         temp.H <- HazardInt(x0=time.obs.0,x=time.obs,nph=nph.obs,timecat0=time.cat.0,timecat=time.cat,fixobs=fix.obs,statobs=status.obs,lambdaobs=lambda.pop,nbyclust=n.by.clust,param=p.td,paramf=p.ntd,deg=degree,n=gln,lw=lglw,matk=MatK,totk=vec.knots,intk=int.knots,nsadj1=NsAdj[[1]],nsadj2=NsAdj[[2]])
         if (temp.H$Test){
             res.LT <- .Machine$double.xmax
@@ -734,14 +737,15 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
 
                 dTP.di.PT.di <- MyProd(dTheta.di,dPsi.di)+MyProd(dPsi.di,dTheta.di)
                 dPsiPsi.di <- MyProd(dPsi.di,dPsi.di)
-                d2lSn.di2 <- d2Theta.di2*sumHB[,1] +
-                    (dTP.di.PT.di+Theta*d2Psi.di2)*sumHB[,2] +
+                d2lSn.di2 <- d2Theta.di2[,ordIdxM]*sumHB[,1] +
+                    (dTP.di.PT.di+Theta*d2Psi.di2[,ordIdxM])*sumHB[,2] +
                     Theta*dPsiPsi.di*sumHB[,3] +
                     MyProd(dTheta.di,dTheta.di)*sumHB[,4] +
                     Theta*dTP.di.PT.di*sumHB[,5] +
                     Theta^2*dPsiPsi.di*sumHB[,6] -
                     MyProd(dlSn.di,dlSn.di)
-                LL.Temp <- apply(d2F.di2+d2lSn.di2[,order(IdxM)],2,sum)
+
+                LL.Temp <- apply(d2F.di2+d2lSn.di2[,ord2IdxM],2,sum)
                 hess <- Reorder(LL.Temp,Mat,IdxM)
 
                 if (Survtype=="counting"){
@@ -756,6 +760,7 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
                         Nu0[IdxNu0] <- ApproxLamb(lwNu0[IdxNu0])
                     }
                     Sn0B <- sapply(Nu0,SumB,v=var.w)
+
                     LogLik <- -sum(lhi-0.5*(log((1+Nu)/(1+Nu0))+(Nu*(Nu+2)-Nu0*(Nu0+2))/var.w-nbcd2*var.w)+log(SnB)-log(Sn0B))
 
                     ## Gradient
@@ -776,9 +781,11 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
                     dF0.db <- -0.5*C10*dNu0.db
                     dF0.ds <- -0.5*C10*dNu0.ds+Nu0*(Nu0+2)/var.w
                     dF0.di <- cbind(dF0.db,dF0.ds,deparse.level=0)
+                    dF0.di[which(Hi0==0),] <- 0
 
                     sumHB0 <- t(sapply(Nu0,SumHB,v=var.w))/Sn0B
                     dlSn0.di <- (dTheta0.di*sumHB0[,1] + Theta0*dPsi0.di*sumHB0[,2])
+                    dlSn0.di[which(Hi0==0),] <- 0
                     dLL0.di <- apply(dF0.di+dlSn0.di,2,sum)
                     dLL.di <- dLL.di-dLL0.di
 
@@ -787,13 +794,14 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
                     d2Hi0.db2 <- temp.H$Hess.Lambda0
 
                     NiN0 <- Nu0/(1+Nu0)
-                    d2Nu0.db2 <- (NiN0/Hi0)*(-(Nu0*(Nu0+2)/(Hi0*(1+Nu0)^2))*MyProd(dHi0.db,dHi0.db)+d2Hi0.db2)
+                    TempProd0 <- MyProd(dHi0.db,dHi0.db)
+                    d2Nu0.db2 <- (NiN0/Hi0)*(-(Nu0*(Nu0+2)/(Hi0*(1+Nu0)^2))*TempProd0+d2Hi0.db2)
                     d2Nu0.db.ds <- (2*NiN0/(Hi0*(1+Nu0)^2))*dHi0.db
                     d2Nu0.ds2 <- 4*NiN0/(1+Nu0)^2
                     d2Nu0.di2 <- cbind(d2Nu0.db2,d2Nu0.db.ds,d2Nu0.ds2,deparse.level=0)
 
                     PiP0 <- 0.5*Psi0/(1+Nu0)
-                    dNu02.db <- MyProd(dNu0.db,dNu0.db)
+                    dNu02.db <- TempProd0*(Nu0/((1+Nu0)*Hi0))^2
                     d2Psi0.db2 <- PiP0*(1.5*dNu02.db/(1+Nu0)-d2Nu0.db2)
                     d2Psi0.db.ds <- PiP0*(1.5*dNu0.db*dNu0.ds/(1+Nu0)-d2Nu0.db.ds-dNu0.db)
                     d2Psi0.ds2 <- PiP0*(1.5*dNu0.ds^2/(1+Nu0)-d2Nu0.ds2-2*dNu0.ds+2*(1+Nu0))
@@ -812,14 +820,17 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
 
                     dTP0.di.PT0.di <- MyProd(dTheta0.di,dPsi0.di)+MyProd(dPsi0.di,dTheta0.di)
                     dPsiPsi0.di <- MyProd(dPsi0.di,dPsi0.di)
-                    d2lSn0.di2 <- d2Theta0.di2*sumHB0[,1] +
-                        (dTP0.di.PT0.di+Theta0*d2Psi0.di2)*sumHB0[,2] +
+                    d2lSn0.di2 <- d2Theta0.di2[,ordIdxM]*sumHB0[,1] +
+                        (dTP0.di.PT0.di+Theta0*d2Psi0.di2[,ordIdxM])*sumHB0[,2] +
                         Theta0*dPsiPsi0.di*sumHB0[,3] +
                         MyProd(dTheta0.di,dTheta0.di)*sumHB0[,4] +
                         Theta0*dTP0.di.PT0.di*sumHB0[,5] +
                         Theta0^2*dPsiPsi0.di*sumHB0[,6] -
                         MyProd(dlSn0.di,dlSn0.di)
-                    LL0.Temp <- apply(d2F0.di2+d2lSn0.di2[,order(IdxM)],2,sum)
+                    d2F0.di2[which(Hi0==0),] <- 0
+                    d2lSn0.di2[which(Hi0==0),] <- 0
+
+                    LL0.Temp <- apply(d2F0.di2+d2lSn0.di2[,ord2IdxM],2,sum)
                     hess <- Reorder(LL.Temp-LL0.Temp,Mat,IdxM)
 
                 }

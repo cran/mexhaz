@@ -1,13 +1,13 @@
-293d56d3b642d15fb655f13edf8df538 *DESCRIPTION
+e2a3f2e7cd869270f8b958b48342bf1e *DESCRIPTION
 e67dcf10e64ed0b160e8a010231ff3f6 *NAMESPACE
-adb20769fb359d4cedc2a15ec64cfac1 *NEWS
+23fc43ce9ba56c5a4e5df8f5c91cbd62 *NEWS
 5360b88ad41cf6ad351682bc29715390 *R/adjsurv.R
 6f927e7b7bf263463ce1c6590c5d37ac *R/fixef.mexhaz.R
 bd3725fddc47c1add2837675f755b5b1 *R/lines.predMexhaz.R
 4dacc414d00bf25f255f92f94f6c018c *R/lines.resMexhaz.R
 f6ea01cb72d23198a85327c97b693883 *R/marginSurvhaz.R
 a1d598b0f83648cd48831324fc4d4e1c *R/mexhaz.R
-40971745d1f0cdb74ed451579c76fe91 *R/mexhazEgh.R
+7d826fe711a3940259f7a03b29b88cd8 *R/mexhazEgh.R
 3b3443f2f8d17e69172c57130bdb9c30 *R/mexhazStd.R
 4bb0155b19fc36b1b1fd4ccc40674120 *R/plot.predMexhaz.R
 83783f74776f006b5ee23459f89eed31 *R/plot.resMexhaz.R
