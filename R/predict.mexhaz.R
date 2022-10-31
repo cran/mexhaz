@@ -414,9 +414,8 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
         }
     }
     if (!is.null(cluster)){
-        le.par <- length(which.td)+length(which.ntd)
         fix.new <- cbind(fix.new,mat.mu)
-        which.ntd <- c(which.ntd, (le.par+1):(le.par+le.mu))
+        which.ntd <- c(which.ntd, n.par:(n.par+le.mu-1))
         names.test <- names(Test)
         Test <- cbind(Test,mat.mu)
         names(Test) <- c(names.test,names.mat.mu)

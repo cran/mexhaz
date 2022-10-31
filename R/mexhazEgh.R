@@ -1,4 +1,4 @@
-mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,verbose=0,iterlim=10000,print.level=1,gradtol=1e-8,mode="fit",...){
+mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,verbose=0,iterlim=10000,print.level=1,gradtol=1e-8,testInit=TRUE,mode="fit",...){
 
     time0 <- as.numeric(proc.time()[3])
     FALCenv <- environment()
@@ -907,55 +907,58 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
         if (Flag==0){
             Flag <- (class(vcov)[1]=="try-error")
             if (Flag==0){
-                Flag <- (mod.lik$code!=1 | sum(is.na(diag(vcov))| diag(vcov)<0))
+                Flag <- (!mod.lik$code%in%c(1,2) | sum(is.na(diag(vcov))| diag(vcov)<0))
             }
         }
-        if (Init==0 & Flag){
-            Iter <- 1
-            while (Iter<9 & Flag){
-                Iter <- Iter + 1
-                init[1] <- init[1]/Iter
-                mod.lik <- try(nlm(LL.Tot,init,iterlim=iterlim,print.level=print.level,gradtol=gradtol,check.analyticals=FALSE,...),silent=TRUE)
-                if (class(mod.lik)[1]!="try-error"){
-                    param.fin <- mod.lik$estimate
-                    code.fin <- mod.lik$code
-                    loglik <- -mod.lik$minimum
-                    iterations <- mod.lik$iterations
-                    names(param.fin) <- param.names
-                    eval.fin <- LL.Tot(param.fin,mu.hat.LT=1)
-                    vcov <- try(solve(eval.fin[[3]]),silent=TRUE)
-                }
-                Flag <- (class(mod.lik)[1]=="try-error")
-                if (Flag==0){
-                    Flag <- (class(vcov)[1]=="try-error")
-                    if (Flag==0){
-                        Flag <- (mod.lik$code!=1 | sum(is.na(diag(vcov))| diag(vcov)<0))
+        if (testInit){
+            if (Init==0 & Flag){
+                Iter <- 1
+                while (Iter<9 & Flag){
+                    Iter <- Iter + 1
+                    init[1] <- init[1]/Iter
+                    mod.lik <- try(nlm(LL.Tot,init,iterlim=iterlim,print.level=print.level,gradtol=gradtol,check.analyticals=FALSE,...),silent=TRUE)
+                    if (class(mod.lik)[1]!="try-error"){
+                        param.fin <- mod.lik$estimate
+                        code.fin <- mod.lik$code
+                        loglik <- -mod.lik$minimum
+                        iterations <- mod.lik$iterations
+                        names(param.fin) <- param.names
+                        eval.fin <- LL.Tot(param.fin,mu.hat.LT=1)
+                        vcov <- try(solve(eval.fin[[3]]),silent=TRUE)
                     }
+                    Flag <- (class(mod.lik)[1]=="try-error")
+                    if (Flag==0){
+                        Flag <- (class(vcov)[1]=="try-error")
+                        if (Flag==0){
+                            Flag <- (!mod.lik$code%in%c(1,2) | sum(is.na(diag(vcov))| diag(vcov)<0))
+                        }
+                    }
+                    Iter <- Iter + 1
                 }
             }
-        }
-        if (Flag){
-            Iter <- 1
-            while (Iter<9 & Flag){
-                init[n.par] <- seq(1,-1,le=9)[Iter]
-                mod.lik <- try(nlm(LL.Tot,init,iterlim=iterlim,print.level=print.level,gradtol=gradtol,check.analyticals=FALSE,...),silent=TRUE)
-                if (class(mod.lik)[1]!="try-error"){
-                    param.fin <- mod.lik$estimate
-                    code.fin <- mod.lik$code
-                    loglik <- -mod.lik$minimum
-                    iterations <- mod.lik$iterations
-                    names(param.fin) <- param.names
-                    eval.fin <- LL.Tot(param.fin,mu.hat.LT=1)
-                    vcov <- try(solve(eval.fin[[3]]),silent=TRUE)
-                }
-                Flag <- (class(mod.lik)[1]=="try-error")
-                if (Flag==0){
-                    Flag <- (class(vcov)[1]=="try-error")
-                    if (Flag==0){
-                        Flag <- (mod.lik$code!=1 | sum(is.na(diag(vcov))| diag(vcov)<0))
+            if (Flag){
+                Iter <- 1
+                while (Iter<9 & Flag){
+                    init[n.par] <- seq(1,-1,le=9)[Iter]
+                    mod.lik <- try(nlm(LL.Tot,init,iterlim=iterlim,print.level=print.level,gradtol=gradtol,check.analyticals=FALSE,...),silent=TRUE)
+                    if (class(mod.lik)[1]!="try-error"){
+                        param.fin <- mod.lik$estimate
+                        code.fin <- mod.lik$code
+                        loglik <- -mod.lik$minimum
+                        iterations <- mod.lik$iterations
+                        names(param.fin) <- param.names
+                        eval.fin <- LL.Tot(param.fin,mu.hat.LT=1)
+                        vcov <- try(solve(eval.fin[[3]]),silent=TRUE)
                     }
+                    Flag <- (class(mod.lik)[1]=="try-error")
+                    if (Flag==0){
+                        Flag <- (class(vcov)[1]=="try-error")
+                        if (Flag==0){
+                            Flag <- (!mod.lik$code%in%c(1,2) | sum(is.na(diag(vcov))| diag(vcov)<0))
+                        }
+                    }
+                    Iter <- Iter + 1
                 }
-                Iter <- Iter + 1
             }
         }
         if (class(mod.lik)[1]!="try-error"){

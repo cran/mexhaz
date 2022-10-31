@@ -1,3 +1,9 @@
+Changes in version 2.4
+
+  o Added missing protoptypes to some C function definitions.
+
+  o Added an argument testInit to the mexhaz function to let the user choose whether several vectors of initial values should be tested in case of failed convergence.
+
 Changes in version 2.3
 
   o Corrected a problem in the formula for the Hessian of the likelihood in the mexhazEgh function.
@@ -107,122 +113,3 @@ Changes in Version 1.4
   the standard deviation of the distribution of the random effect,
   allowing unconstrained optimisation and consistent with future
   multidimensional implementations).
-
-Changes in Version 1.3
-  
-  o Correction of an off-by-one error in the C functions used to handle
-  hazards described by the logarithm of a restricted cubic spline that
-  may cause an R session crash.
-
-Changes in Version 1.2
-
-  From a general point a view, the code of almost all functions has
-  been modified in order to improve its clarity (suppression of
-  redundant calculations and unnecessary variables, etc.) without
-  modifying the obtained results. Besides, the following changes have
-  been made:
-
-  o The 'mexhaz' function now accepts counting process style input for
-  the follow-up time that allows the modelling of survival data with
-  delayed entries.
-
-  o The 'base' argument of the 'mexhaz' function now accepts a new
-  value ('exp.ns') that allows the modelling of the logarithm of the
-  baseline hazard by a restricted cubic spline.
-
-  o The 'mexhaz' function now accepts a new argument named 'numHess'
-  that allows the estimation of the Hessian by the 'hessian' function
-  of the 'numDeriv' package.
-
-  o The 'bo.max' argument of the 'mexhaz' function has been replaced
-  by a new argument named 'bound' that allows the specification of the
-  boundary knots of spline functions.
-
-  o The following objects have been added to the output of the
-  'mexhaz' function: (i) the vector of initial values of the
-  parameters ('init'), (ii) the shrinkage estimators with their
-  standard errors ('mu.hat'), (iii) the variances of the shrinkage
-  estimators ('var.mu.hat'), (iv) the covariances between each
-  shrinkage estimator, the fixed effect parameter estimates
-  ('vcov.fix.mu.hat') and (v) the name of the variable representing
-  the expected hazard (for excess hazard regression models). (ii)-(iv)
-  are only relevant when a random effect is present. (iii) and (iv)
-  are used by the 'predict.mexhaz' function to obtain cluster-specific
-  predictions with appropriate confidence intervals.
-
-  o The 'predMexhaz' has been replaced by a function named
-  'predict.mexhaz' and now accepts new arguments: (i) 'cluster' allows
-  the estimation of cluster-specific predictions (only relevant when a
-  random effect is present), (ii) 'include.gradient' allows the
-  function to return the gradient of the logarithm of the hazard and
-  the gradient of the logarithm of the cumulative hazard, (iii)
-  'level' designates the level of confidence to be used to calculate
-  confidence intervals, (iv) 'delta.type.h' and 'delta.type.s' allow
-  the user to choose the type of confidence interval to be calculated
-  for the hazard and the survival when using the Delta Method.
-  
-  o The 'predict.mexhaz' function also returns the covariance matrix
-  used for the estimation of the variances and confidence intervals of
-  the hazard and survival.
-
-  o A function 'update.mexhaz' applicable to objects of class 'mexhaz'
-  has been added. It allows the user to update a mexhaz model by
-  changing one or several arguments (not necessarily the formula) of
-  the original model.
-
-  o A method 'ranef.mexhaz' applicable to objects of class 'mexhaz' has been
-  added. It allows the extraction of the cluster-specific random
-  effects with their standard errors.
-
-  o A bug that hampered model convergence for big datasets has been
-  corrected in the 'FrailtyAdapt.c' file.
-
-Changes in Version 1.1
-
-  Majors changes (no backward compatibility)! See help files for a
-  full explanation of the arguments and outputs of the functions.
-
-  o The 'bound' argument of the 'mexhaz' function has been renamed
-  'bo.max'.
-
-  o The 'pl.nlm' argument of the 'mexhaz' function has been suppressed
-  (it is still possible to print information from the nlm optimisation
-  procedure by supplying the argument 'print.level' which will be
-  directly passed to nlm).
-
-  o The output of the 'mexhaz' function has been modified to
-  facilitate the application of S3 methods. The object returned by the
-  'mexhaz' function is a list of class 'mexhaz'.
-
-  o Methods plot() and summary() for an object of class 'mexhaz' have
-  been added.
-
-  o The 'pred.mexhaz' function has been renamed 'predMexhaz' and its
-  arguments have been modified: the 't' and 'nb.time.pts' have been
-  replaced by a single argument 'time.pts' which requests the user to
-  give a vector of time points at which the predictions are to be
-  made; the 'delta' argument has been replaced by a 'conf.int'
-  argument which allows the user to select the method for confidence
-  limits calculation ("none", "delta", or "simul").
-
-  o A bug in the 'pred.mexhaz' (now, 'predMexhaz') function has been
-  fixed: in the previous version, supplying a data.frame of
-  covariables containing more than one line AND multiple time points
-  (that is, trying to predict hazard/survival for different
-  individuals at different time points) resulted in an abortion of the
-  current R session. The problem has been solved by preventing such a
-  situation to occur.
-
-  o The Delta Method is now available for models using a B-spline of
-  degree 1 for the logarithm of the baseline hazard and for models
-  using a piecewise constant hazard.
-
-  o The output of the 'predMexhaz' function has been modified to
-  facilitate the application of S3 methods. The object returned by the
-  'predMexhaz' function is a list of class 'predMexhaz'.
-        
-  o Methods print(), plot() and points() for an object of class
-  'predMexhaz' have been added.
-    
-  o The function 'graph.mexhaz' has been suppressed (the methods
-  plot() and points() are to be used instead).

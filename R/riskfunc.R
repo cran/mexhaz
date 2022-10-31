@@ -32,7 +32,7 @@ riskfunc <- function(object,time.pts,data,data.0,clust.name=NULL,marginal=TRUE,t
     multiobs <- (dim.data>1)
     cluster.0 <- cluster.1 <- NULL
     if (!is.null(clust.name)){
-        if (class(clust.name)!="character" & length(clust.name)!=1){
+        if (!is.character(clust.name[1]) & length(clust.name)!=1){
             stop("The 'clust.name' argument must be a character string giving the name of the clustering variable in the dataset 'data'/'data.0'...")
         }
         if (!clust.name%in%names(data)){

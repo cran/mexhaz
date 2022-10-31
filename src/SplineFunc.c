@@ -81,7 +81,7 @@ double NSpl(double x, double *TotKT, double *MatKT, double *NsAdj1, double *NsAd
   return res;
 }
 
-double IntSpline23(double (*Spl)(), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg){
+double IntSpline23(double (*Spl)(double, double *, double *, double *, double *), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg){
   int i;
   double A = 0.5*(b-a);
   double B = 0.5*(b+a);
@@ -209,7 +209,7 @@ double DeltaNSpl(double x, double *TotKT, double *MatKT, double *NsAdj1, double 
   return res;
 }
 
-double IntDSpline23(double (*DSpl)(), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg, int Lsdk, int Idx, double *TempV, double *Res){
+double IntDSpline23(double (*DSpl)(double, double *, double *, double *, double *, int, int, double *), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg, int Lsdk, int Idx, double *TempV, double *Res){
   double A = 0.5*(b-a);
   double B = 0.5*(b+a);
   int i, j;
@@ -245,7 +245,7 @@ double IntDNSpl(double a, double b, double *TotKT, double *MatKT, double *NsAdj1
   return Result;
 }
 
-double IntDSpline23H(double (*DSpl)(), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg, int Lsdk, int Idx, double *TempV, double *Hess, double *Res){
+double IntDSpline23H(double (*DSpl)(double, double *, double *, double *, double *, int, int, double *), double a, double b, double *TotKT, double *MatKT, double *TempD, double *ParamT, double *N, double *lW, int lleg, int Lsdk, int Idx, double *TempV, double *Hess, double *Res){
   double A = 0.5*(b-a);
   double B = 0.5*(b+a);
   int i, j, k;

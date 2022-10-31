@@ -33,7 +33,7 @@ bound = NULL, n.gleg = 20, init = NULL, random = NULL,
 n.aghq = 10, fnoptim = c("nlm", "optim"), verbose = 0,
 method = "Nelder-Mead", iterlim = 10000, numHess = FALSE,
 print.level = 1, exactGradHess = TRUE, gradtol =
-ifelse(exactGradHess, 1e-8, 1e-6), ...)
+ifelse(exactGradHess, 1e-8, 1e-6), testInit = TRUE, ...)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -141,7 +141,8 @@ default, \code{n.gleg=20}.
     if \code{exactGradHess=TRUE} (except for the excess hazard random
     effect model for which this argument is ignored), the intercept is
     set to 0.5*log(Number of events/Person-years of observation) and all
-    other parameters set to 0. In case of failed convergence, several
+    other parameters set to 0. In case of failed convergence, and if the
+    \code{testInit} argument is set to \code{TRUE} (default), several
     trials are run with an adaptation of the value of the intercept.
 
     if \code{exactGradHess=FALSE}, the following values are used:
@@ -161,8 +162,12 @@ default, \code{n.gleg=20}.
     to 0;
 
     the parameter representing the standard deviation of the random
-    effect is set to 0.1 (if \code{exactGradHess=TRUE}, several trials are run with an adaptation of the value in case of failed convergence).
-}
+    effect is set to 0.1. In case of failed convergence, if
+    \code{exactGradHess=TRUE} and if \code{testInit=TRUE}, several
+    trials are run with an adaptation of the value of this random effect
+    parameter.
+
+  }
   \item{random}{
 name of the variable to be entered as a random effect (must be given
 between quotes), representing the cluster membership. By default,
@@ -235,7 +240,18 @@ logical value allowing the user to choose between the Hessian returned
     enough to zero to terminate the algorithm. The default value depends
     on the value of the argument \code{exactGradHess}. 
   }
-  \item{\dots}{
+  \item{testInit}{ this argument is used only when
+    \code{exactGradHess=TRUE} and when the model is not an excess hazard
+    random effect model. It instructs the \code{mexhaz} function to try
+    several vectors of initial values in case optimization was not
+    successful with the default (or user-defined) initial
+    values. Because optimization based on the analytical gradient and
+    Hessian is usually fast, this simple and empirical procedure proves
+    useful to increase the probability of convergence in cases when it
+    is difficult to specify appropriate initial values. Only the initial
+    values for the intercept and for the parameter corresponding to the
+    random effect are modified.}
+    \item{\dots}{
 represents additional parameters directly passed to \code{nlm} or
 \code{optim} to control the optimisation process.
 }
