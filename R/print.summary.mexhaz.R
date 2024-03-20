@@ -8,6 +8,7 @@ print.summary.mexhaz <- function(x, ...){
         ci.lower <- exp(PH+qnorm(0.025)*sePH)
         ci.upper <- exp(PH+qnorm(0.975)*sePH)
         HRTab <- cbind(Coef=round(PH,4),HR=round(HR,4),CI.lower=round(ci.lower,4),CI.upper=round(ci.upper,4))
+        row.names(HRTab) <- x$names.ph
         ishr <- 1
     }
 
@@ -15,6 +16,9 @@ print.summary.mexhaz <- function(x, ...){
     print(x$call)
     cat("\nCoefficients:\n")
     printCoefmat(x$coefficients,P.values=TRUE,has.Pvalue=TRUE)
+    if (x$baseline=="pw.cst"){
+        cat("\nNote: For a piecewise constant baseline hazard, the coefficients\n correspond to the logarithm of the hazard on each time interval.\n")
+    }
     if (ishr){
         cat("\nHazard ratios (for proportional effect variables):\n")
         print(HRTab)

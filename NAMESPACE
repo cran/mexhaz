@@ -1,6 +1,6 @@
 useDynLib(mexhaz, .registration = TRUE, .fixes = "C_")
 
-export(adjsurv, fixef, fixef.mexhaz, mexhaz, ranef, ranef.mexhaz, riskfunc, vcov, vcov.mexhaz)
+export(adjsurv, fixef, fixef.mexhaz, mexhaz, ranef, ranef.mexhaz, riskfunc)
 
 importFrom("statmod", "gauss.quad")
 importFrom("numDeriv", "grad", "jacobian", "hessian")

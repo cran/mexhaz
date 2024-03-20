@@ -1,4 +1,4 @@
-mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,verbose=0,iterlim=10000,print.level=1,gradtol=1e-8,testInit=TRUE,mode="fit",...){
+mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,verbose=0,iterlim=10000,print.level=1,gradtol=1e-8,testInit=TRUE,mode="fit",keep.data=FALSE,name.data=NULL,...){
 
     time0 <- as.numeric(proc.time()[3])
     FALCenv <- environment()
@@ -12,9 +12,11 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
     if (m[2]==0){
         stop("The 'data' argument is required...")
     }
-    name.data <- paste(substitute(data),sep="")
-    if (length(name.data)>1){
-        name.data <- name.data[2]
+    if (keep.data){
+        data.orig <- data
+    }
+    else {
+        data.orig <- NA
     }
     if (base == "exp.bs" & !degree %in% c(1:3)) {
         stop("This function can only be used to estimate log-hazards described by B-splines of degree 1 to 3...")
@@ -310,6 +312,9 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
             status.obs <- status.obs[-Idx.NA.Rdm]
             data.fix <- data.fix[-Idx.NA.Rdm,,drop=FALSE]
             data.nph <- data.nph[-Idx.NA.Rdm,,drop=FALSE]
+        }
+        if (is.factor(random.obs)){
+            random.obs <- droplevels(random.obs)
         }
         random.obs <- as.factor(random.obs)
         clust <- levels(random.obs)
@@ -1019,14 +1024,16 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
         }
     }
     time1 <- as.numeric(proc.time()[3])
-    PrintData <- data.frame(Name=name.data,N.Obs.Tot=n.obs.tot,N.Obs=n.obs,N.Events=n.events,N.Clust=n.clust,row.names="")
-    PrintDetails <- data.frame(Iter=iterations,Eval=parent.neval, Base=base,Nb.Leg=n.gleg,Nb.Aghq=n.aghq,Optim="nlm",Method="---",Code=code.fin,LogLik=loglik,Total.Time=(time1-time0),row.names="")
+    if (mode!="eval"){
+        PrintData <- data.frame(Name=name.data,N.Obs.Tot=n.obs.tot,N.Obs=n.obs,N.Events=n.events,N.Clust=n.clust,row.names="")
+        PrintDetails <- data.frame(Iter=iterations,Eval=parent.neval, Base=base,Nb.Leg=n.gleg,Nb.Aghq=n.aghq,Optim="nlm",Method="---",Code=code.fin,LogLik=loglik,Total.Time=(time1-time0),row.names="")
 
-    ## Part of the results printed on screen
-    cat("\nData\n")
-    print(PrintData)
-    cat("\nDetails\n")
-    print(PrintDetails)
+        ## Part of the results printed on screen
+        cat("\nData\n")
+        print(PrintData)
+        cat("\nDetails\n")
+        print(PrintDetails)
+    }
 
     res.FAR <- list(dataset=name.data,
          call=call,
@@ -1054,6 +1061,7 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
          mu.hat=mu.hat.df,
          var.mu.hat=var.mu.hat,
          vcov.fix.mu.hat=t(vcov.fix.mu.hat),
+         data=data.orig,
          n.par=n.par,
          n.gleg=n.gleg,
          n.aghq=n.aghq,

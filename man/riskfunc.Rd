@@ -11,17 +11,18 @@
   assumption of multivariate normality of the model parameter
   estimates). This function allows the computation of estimates at one
   time point for several vectors of covariates or for one vector of
-  covariates at several time points. When the model includes a random
-  effect, two types of predictions can be made: (i) marginal predictions
-  (obtained by integration over the random effect distribution) or (ii)
-  conditional predictions either for a particular cluster (using the
-  corresponding shrinkage estimate) or for the value 0 of the random
-  effect.}
+  covariates at several time points.  When the model includes a random effect, three types of
+predictions can be made: (i) marginal predictions (obtained by
+integration over the random effect distribution), (ii) cluster-specific
+posterior predictions for an existing cluster, or (iii) conditional
+predictions for a given quantile of the random effect distribution (by
+default, for the median value, that is, 0).}
 
 \usage{
-riskfunc(object, time.pts, data, data.0, clust.name = NULL, 
-marginal = TRUE, type = c("hr", "rr"), conf.int = c("delta",
-"simul"), level = 0.95, nb.sim = 10000, seed = NULL)
+riskfunc(object, time.pts, data, data.0, marginal = TRUE, quant.rdm = 0.5,
+cluster = NULL, quant.rdm.0 = 0.5, cluster.0 = NULL, type = c("hr", "rr"),
+conf.int = c("delta", "simul"), level = 0.95, nb.sim = 10000, seed = NULL,
+dataset = NULL)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -38,17 +39,6 @@ marginal = TRUE, type = c("hr", "rr"), conf.int = c("delta",
   \item{data.0}{a \code{data.frame} containing the values of the
     covariates of the reference population. Each row of \code{data.0} is
     used as the reference for the corresponding row of \code{data}.}
-  \item{clust.name}{name of the variable in \code{data} (and
-    \code{data.0}) containing information on cluster membership to be
-    used to obtain conditional predictions from a mixed effect
-    model. Standard errors of prediction are obtained with the
-    approximation of the conditional mean squared error of prediction
-    (without the second-order bias correction term) described in Booth
-    and Hobert. This argument is not used if the model is a fixed effect
-    model. The default value is \code{NULL}: this corresponds to
-    marginal predictions (if \code{marginal} is set to \code{TRUE}, the
-    preferred option), or to conditional predictions for the value 0 of
-    the random effect (if \code{marginal} is set to \code{FALSE}).}
   \item{marginal}{logical value controlling the type of predictions
     returned by the function when the model includes a random
     intercept. When \code{TRUE}, marginal predictions are computed. The
@@ -56,6 +46,30 @@ marginal = TRUE, type = c("hr", "rr"), conf.int = c("delta",
     over the distribution of the random effect. When \code{FALSE}
     (default value), conditional predictions depending on the value of
     the \code{cluster} argument are calculated.}
+  \item{quant.rdm}{numerical value (between 0 and 1) specifying the
+    quantile of the random effect distribution that should be used when
+    requesting conditional predictions. The default value is set to 0.5
+    (corresponding to the median, that is a value of the random effect
+    of 0). This argument is ignored if the model is a fixed effect
+    model, when the \code{marginal} argument is set to \code{TRUE}, or
+    the \code{cluster} argument is not \code{NULL}.}
+  \item{cluster}{a single value corresponding to the name of the cluster for
+    which posterior predictions should be calculated. These predictions
+    are obtained by integrating over the cluster-specific posterior
+    distribution of the random effect and thus require the original
+    dataset. The dataset can either be provided as part of the
+    \code{mexhaz} object given as argument or by specifying the name of
+    the dataset in the \code{dataset} argument (see below). The
+    \code{cluster} argument is not used if the model is a fixed effect
+    model. The default value is \code{NULL}: this corresponds to
+    marginal predictions (if \code{marginal} is set to \code{TRUE}, the preferred
+    option), or to conditional predictions for a given quantile (by
+    default, the median) of the distribution of the random
+    effect (if \code{marginal} is set to \code{FALSE}).}
+  \item{quant.rdm.0}{random effect distribution quantile value to be used with \code{data.0} (see
+    argument \code{quant.rdm} for details).}
+  \item{cluster.0}{cluster value to be used with \code{data.0} (see
+    argument \code{cluster} for details).}
   \item{type}{argument specifying the type of predictions to be
   calculated. Selection can be made between \code{"hr"} (hazard ratio)
   and \code{"rr"} (risk ratio, i.e., ratio of cumulative failure
@@ -77,6 +91,12 @@ marginal = TRUE, type = c("hr", "rr"), conf.int = c("delta",
  simulations (only relevant when \code{conf.int} is set to
  \code{"simul"}). The default value is set to \code{NULL} in which case
  a random seed is automatically generated inside the function.}
+    \item{dataset}{original dataset used to fit the \code{mexhaz} object
+    given as argument to the function. This argument is only necessary
+    if cluster-specific posterior predictions are requested (and if the
+    dataset is not already provided in the \code{mexhaz} object). The
+    default value is set to \code{NULL}.}
+
 
 }
 %\details{
@@ -106,8 +126,8 @@ marginal = TRUE, type = c("hr", "rr"), conf.int = c("delta",
   hierarchical data allowing for non-linear and non-proportional effects
   of covariates. Stat Med 2016;35:3066-3084 (doi: 10.1002/sim.6881)
 
-  Booth JG, Hobert JP. Standard errors of prediction in generalized
-  linear mixed models. J Am Stat Assoc 1998;93:262-272 (doi: 10.2307/2669622).
+  Skrondal A, Rabe-Hesketh S. Prediction in multilevel generalized
+  linear models. J R Stat Soc A Stat Soc 2009;172(3):659-687 (doi: 10.1111/j.1467-985X.2009.00587.x).
 }
 \author{
 Hadrien Charvat, Aurelien Belot

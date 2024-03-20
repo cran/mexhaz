@@ -33,7 +33,8 @@ bound = NULL, n.gleg = 20, init = NULL, random = NULL,
 n.aghq = 10, fnoptim = c("nlm", "optim"), verbose = 0,
 method = "Nelder-Mead", iterlim = 10000, numHess = FALSE,
 print.level = 1, exactGradHess = TRUE, gradtol =
-ifelse(exactGradHess, 1e-8, 1e-6), testInit = TRUE, ...)
+ifelse(exactGradHess, 1e-8, 1e-6), testInit = TRUE,
+keep.data = FALSE, ...)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -251,6 +252,12 @@ logical value allowing the user to choose between the Hessian returned
     is difficult to specify appropriate initial values. Only the initial
     values for the intercept and for the parameter corresponding to the
     random effect are modified.}
+  \item{keep.data}{ logical argument determining whether the dataset
+  should be kept in the object returned by the function: this can be
+  useful in certain contexts (e.g., to calculate cluster-specific
+  posterior predictions from a random intercept model) but might create
+  unnecessarily voluminous objects. The default
+  value is set to \code{FALSE}.}
     \item{\dots}{
 represents additional parameters directly passed to \code{nlm} or
 \code{optim} to control the optimisation process.
@@ -304,6 +311,8 @@ represents additional parameters directly passed to \code{nlm} or
     estimator of the i-th cluster and the fixed effect estimates. This
     matrix is used by the function \code{predict.mexhaz} to make
     cluster-specific predictions.}
+  \item{data}{original dataset used to fit the model (if
+  \code{keep.data} was set to \code{TRUE}).}
   \item{n.par}{number of estimated parameters.}
   \item{n.gleg}{number of Gauss-Legendre quadrature points used to
     calculate the cumulative (excess) hazard (only relevant if a

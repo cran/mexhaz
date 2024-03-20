@@ -23,19 +23,11 @@ logarithm of the full marginal likelihood, defined as the sum of the
 logarithms of the cluster-specific marginal likelihoods, is then
 maximised using an optimisation routine such as \code{nlm} (default) or
 \code{optim}. Functions to compute and plot the predicted (excess)
-hazard and (net) survival (possibly with marginal or cluster-specific predictions in
-the case of a random effect model) are provided.
+hazard and (net) survival are provided. In the case of a random
+intercept model, three types of predictions can be obtained : marginal
+(population-averaged), cluster-specific posterior (cluster-averaged), or
+conditional (for a given quantile of the ditribution of the random effect).
 
-}
-
-\details{
-\tabular{ll}{
-Package: \tab mexhaz\cr
-Type: \tab Package\cr
-Version: \tab 2.2\cr
-Date: \tab 2022-01-19\cr
-License: \tab GPL (>=2)\cr
-}
 }
 
 \author{

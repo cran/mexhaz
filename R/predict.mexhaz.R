@@ -1,7 +1,7 @@
 predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = NA),
-    cluster = NULL, marginal = FALSE, conf.int = c("delta", "simul", "none"), level = 0.95,
+    marginal = FALSE, quant.rdm = 0.5, cluster = NULL, conf.int = c("delta", "simul", "none"), level = 0.95,
     delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
-        "log", "plain"), nb.sim = 10000, keep.sim = FALSE, include.gradient = FALSE,
+        "log", "plain"), nb.sim = 10000, keep.sim = FALSE, include.gradient = FALSE, dataset = NULL,
     ...)
 {
     time0 <- as.numeric(proc.time()[3])
@@ -15,62 +15,95 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
     degree <- object$degree
     knots <- object$knots
     n.gleg <- object$n.gleg
-    BoI <- object$boundary.knots[1]
-    BoS <- object$boundary.knots[2]
+    boundary.knots <- object$boundary.knots
+    BoI <- boundary.knots[1]
+    BoS <- boundary.knots[2]
     max.time <- object$max.time
     coef <- object$coefficients
     vcov <- object$vcov
     n.par <- object$n.par
+    Surv.string <- strsplit(strsplit(as.character(formula)[2],"Surv[(]")[[1]][2],"[)]")[[1]]
+    event.var <- strsplit(strsplit(Surv.string,"[[:print:]]*event[ ]*=[ ]*")[[1]][2],",[[:print:]]*")[[1]]
+    time.var <- strsplit(strsplit(Surv.string,"[[:print:]]*time[ ]*=[ ]*")[[1]][2],",[[:print:]]*")[[1]]
+    time2.var <- strsplit(strsplit(Surv.string,"[[:print:]]*time2[ ]*=[ ]*")[[1]][2],",[[:print:]]*")[[1]]
+    random <- object$random
+    expected <- object$expected
+    include.grad <- include.gradient
+    if (is.na(expected)){
+        expected <- NULL
+    }
     if (!is.numeric(level) | (level > 1 | level < 0)) {
         level <- 0.95
         warning("The 'level' argument must be a numerical value in (0,1)...")
     }
-    if (!is.null(cluster)) {
-        if (is.na(object$random)) {
-            stop("The 'cluster' argument cannot be used with a fixed effects model...")
+    res0 <- NULL
+    type.me <- "fixed"
+
+    if (!is.na(random)){
+        if (!is.null(quant.rdm)){
+            if (!(marginal == TRUE | !is.null(cluster))){
+                rdm.val <- qnorm(quant.rdm,mean=0,sd=exp(coef[n.par]))
+                res0 <- data.frame(quant.rdm=quant.rdm,rdm.val=rdm.val)
+                type.me <- "conditional"
+            }
         }
-        if (length(cluster) != 1 & length(cluster) != dim(data.val)[1]) {
-            stop("The 'cluster' argument must be either a single number or character string corresponding to the name of the cluster for which predictions are wanted, or a vector of length the number of rows in data.val...")
+        if (marginal == TRUE){
+            include.grad <- TRUE
+            type.me <- "marginal"
         }
-        if (marginal == TRUE) {
-            stop("The 'cluster' argument cannot be used when marginal predictions are requested...")
-        }
-        Idx.nmh <- which(!cluster%in%object$mu.hat$cluster)
-        if (length(Idx.nmh) > 0) {
-            stop("Some elements of the 'cluster' argument do not correspond to existing clusters...")
-        }
-        if (length(cluster) == 1){
-            Idx.mh <- which(object$mu.hat$cluster == cluster)
-            mat.mu <- 1
-            names.mat.mu <- paste0("cluster",cluster)
-            le.mu <- 1
-            names.tot <- c(names(coef[-n.par]),names.mat.mu)
-            coef <- c(coef[-n.par], object$mu.hat[Idx.mh, ]$mu.hat)
-            vcov1 <- cbind(vcov[-n.par, -n.par], t(object$vcov.fix.mu.hat[Idx.mh, , drop = FALSE]))
-            vcov <- rbind(vcov1, c(object$vcov.fix.mu.hat[Idx.mh, ], object$var.mu.hat[Idx.mh, Idx.mh]))
-            colnames(vcov) <- rownames(vcov) <- names.tot
-        }
-        else {
-            mat.mu <- as.matrix(t(sapply(cluster,function(x){1*(object$mu.hat$cluster==x)}))) ## model.matrix(~-1+as.factor(cluster))
-            names.mat.mu <- paste0("cluster",object$mu.hat$cluster)
-            le.mu <- dim(mat.mu)[2]
-            names.tot <- c(names(coef[-n.par]),names.mat.mu)
-            coef <- c(coef[-n.par], object$mu.hat$mu.hat)
-            vcov1 <- cbind(vcov[-n.par, -n.par], t(object$vcov.fix.mu.hat))
-            vcov <- rbind(vcov1, cbind(object$vcov.fix.mu.hat, object$var.mu.hat))
-            colnames(vcov) <- rownames(vcov) <- names.tot
+        else if (!is.null(cluster)){
+            if (length(cluster) != 1) {
+                stop("The 'cluster' argument must be a single number or character string corresponding to the name of the cluster for which predictions are wanted...")
+            }
+            Idx.nmh <- which(!cluster%in%object$mu.hat$cluster)
+            if (length(Idx.nmh) > 0) {
+                stop("The 'cluster' argument must correspond to the name of an existing cluster...")
+            }
+            ndata <- "NA"
+            if (!is.null(dataset)){
+                ndata <- paste0(substitute(dataset))
+                if (length(ndata)>1){
+                    ndata <- ndata[2]
+                }
+            }
+            if (!is.null(dim(object$data)[1])){
+                data0 <- object$data
+            }
+            else if (!is.null(dataset) & object$dataset == ndata){
+                data0 <- dataset
+            }
+            else {
+                stop("Calculation of cluster-specific posterior predictions requires the original dataset.\n No dataset provided or dataset different from the one used to fit the model...")
+            }
+            if (conf.int == "simul"){
+                warning("For cluster-specific posterior predictions, only delta method-based confidence intervals are currently available...")
+                conf.int <- "delta"
+            }
+            res0 <- data.frame(cluster=cluster)
+            names(res0) <- random
+            data.post <- data0[data0[,random] == cluster,]
+
+            ## For predicted survival
+            NewObs1 <- data.post[1,]
+            NewObs1[,random] <- cluster
+            NewObs1[,event.var] <- 0
+
+            ## For predicted survival time derivative
+            NewObs2 <- data.post[1,]
+            NewObs2[,random] <- cluster
+            NewObs2[,event.var] <- 1
+
+            if (!is.null(expected)){
+                NewObs2[,expected] <- 0
+                NewObs1[,expected] <- 0
+            }
+
+            tDenom <- mexhazStd(formula=formula,data=data.post,random=random,expected=expected,base=base,degree=degree,knots=knots,bound=boundary.knots,mode="eval",init=coef,...)
+
+            type.me <- "posterior"
         }
     }
-    if (marginal == TRUE & is.na(object$random)){
-        marginal <- FALSE
-    }
-    if (marginal == TRUE){
-        include.grad <- TRUE
-    }
-    else {
-        include.grad <- include.gradient
-    }
-    type.me <- ifelse(marginal, "marginal", "conditional")
+
     Idx.T.NA <- which(is.na(time.pts) | time.pts < 0)
     if (length(Idx.T.NA) > 0) {
         stop("The 'time.pts' argument contains NA or negative values...")
@@ -99,8 +132,8 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
     }
     if (conf.int == "simul" & (nb.sim <= 0 | (round(nb.sim, 0) !=
         nb.sim))) {
-        warning("The 'nb.sim' argument must be a strictly positive integer. Consequently, the default value of 50000 simulations has been used...")
-        nb.sim <- 50000
+        warning("The 'nb.sim' argument must be a strictly positive integer. Consequently, the default value of 10000 simulations has been used...")
+        nb.sim <- 10000
     }
     tot.formula <- terms(formula, data = data.val, specials = "nph")
     indNph <- attr(tot.formula, "specials")$nph
@@ -413,13 +446,6 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
             which.td <- c(n.inter + 1:n.td.base)
         }
     }
-    if (!is.null(cluster)){
-        fix.new <- cbind(fix.new,mat.mu)
-        which.ntd <- c(which.ntd, n.par:(n.par+le.mu-1))
-        names.test <- names(Test)
-        Test <- cbind(Test,mat.mu)
-        names(Test) <- c(names.test,names.mat.mu)
-    }
     fix.new <- t(fix.new)
     nph.new <- t(nph.new)
     nb.par <- length(c(which.ntd, which.td))
@@ -427,10 +453,55 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
         fixobs = fix.new, param = coef[which.td], paramf = coef[which.ntd],
         deg = degree, n = gln, lw = lglw, matk = MatK, totk = vec.knots,
         intk = int.knots, nsadj1 = NsAdj[[1]], nsadj2 = NsAdj[[2]])
-    if (marginal == TRUE){
+    if (type.me == "marginal"){
         temp.M <- HazardMarg(temp.H$LogHaz,temp.H$HazCum,exp(2*coef[n.par]))
         LogHaz <- temp.M$LogHaz
         HazCum <- temp.M$HazCum
+    }
+    else if (type.me == "conditional"){
+        LogHaz <- temp.H$LogHaz + rdm.val
+        HazCum <- temp.H$HazCum*exp(rdm.val)
+    }
+    else if (type.me == "posterior"){
+        varcov <- vcov
+        LogHaz <- rep(NA,nb.time.pts)
+        HazCum <- rep(NA,nb.time.pts)
+        Grad.LH <- matrix(NA,nb.time.pts,n.par)
+        Grad.LC <- matrix(NA,nb.time.pts,n.par)
+        Var.Log.Haz <- rep(NA,nb.time.pts)
+        Var.Log.Cum <- rep(NA,nb.time.pts)
+        for (i in 1:nb.time.pts){
+
+            NewObs1[,names(Test)] <- Test[i,]
+            NewObs2[,names(Test)] <- Test[i,]
+            if (is.na(time2.var)){
+                NewObs1[,time.var] <- time.pts[i]
+                NewObs2[,time.var] <- time.pts[i]
+            }
+            else {
+                NewObs1[,time.var] <- 0
+                NewObs2[,time.var] <- 0
+                NewObs1[,time2.var] <- time.pts[i]
+                NewObs2[,time2.var] <- time.pts[i]
+            }
+            dataS <- rbind(data.post,NewObs1)
+            dataSp <- rbind(data.post,NewObs2)
+
+            tSt <- mexhazStd(formula=formula,data=dataS,random=random,expected=expected,base=base,degree=degree,knots=knots,bound=boundary.knots,mode="eval",init=coef,...)
+            tSpt <- mexhazStd(formula=formula,data=dataSp,random=random,expected=expected,base=base,degree=degree,knots=knots,bound=boundary.knots,mode="eval",init=coef,...)
+
+            LogHaz[i] <- tSt$loglik-tSpt$loglik
+            HazCum[i] <- tSt$loglik-tDenom$loglik
+
+            Grad.LH[i,] <- tSt$gradient-tSpt$gradient
+            Var.Log.Haz[i] <- t(Grad.LH[i,])%*%vcov%*%Grad.LH[i,]
+            Grad.LC[i,] <- (tSt$gradient-tDenom$gradient)/HazCum[i]
+            Var.Log.Cum[i] <- t(Grad.LC[i,])%*%vcov%*%Grad.LC[i,]
+
+            colnames(Grad.LH) <- colnames(vcov)
+            colnames(Grad.LC) <- colnames(vcov)
+
+        }
     }
     else {
         LogHaz <- temp.H$LogHaz
@@ -439,39 +510,41 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
     lambda <- exp(LogHaz)
     Surv <- exp(-HazCum)
     if (conf.int == "delta") {
-        varcov <- vcov[c(which.ntd, which.td), c(which.ntd, which.td),
-            drop = FALSE]
-        temp.V <- DeltaFct(x = time.new, nph = nph.new, timecat = time.cat,
-            fixobs = fix.new, paramt = c(coef[which.ntd], coef[which.td]),
-            deg = degree, n = gln, lw = lglw, matk = MatK, totk = vec.knots,
-            intk = int.knots, nsadj1 = NsAdj[[1]], nsadj2 = NsAdj[[2]],
-            varcov = varcov, as.numeric(include.grad))
-        Var.Log.Haz <- temp.V$VarLogHaz
-        Var.Log.Cum <- temp.V$VarLogCum
-        varcov <- varcov[order(c(which.ntd, which.td)), order(c(which.ntd,
-            which.td)), drop = FALSE]
-        if (include.grad == TRUE) {
-            Grad.LH <- matrix(temp.V$GradLogHaz, nb.time.pts,
-                nb.par)[, order(c(which.ntd, which.td)), drop = FALSE]
-            Grad.LC <- matrix(temp.V$GradLogCum, nb.time.pts,
-                nb.par)[, order(c(which.ntd, which.td)), drop = FALSE]
-            colnames(Grad.LH) <- colnames(varcov)
-            colnames(Grad.LC) <- colnames(varcov)
-        }
-        if (marginal == TRUE){
-            varcov <- vcov
-            temp.VM <- DeltaMarg(temp.H$LogHaz,temp.H$HazCum,Grad.LH,Grad.LC,exp(2*coef[n.par]),vcov)
-            Var.Log.Haz <- temp.VM$VarLogHaz
-            Var.Log.Cum <- temp.VM$VarLogCum
-            if (include.gradient == TRUE){
-                Grad.LH <- temp.VM$GradLogHaz
-                Grad.LC <- temp.VM$GradLogCum
-                colnames(Grad.LH) <- colnames(vcov)
-                colnames(Grad.LC) <- colnames(vcov)
+        if (type.me != "posterior"){
+            varcov <- vcov[c(which.ntd, which.td), c(which.ntd, which.td),
+                           drop = FALSE]
+            temp.V <- DeltaFct(x = time.new, nph = nph.new, timecat = time.cat,
+                               fixobs = fix.new, paramt = c(coef[which.ntd], coef[which.td]),
+                               deg = degree, n = gln, lw = lglw, matk = MatK, totk = vec.knots,
+                               intk = int.knots, nsadj1 = NsAdj[[1]], nsadj2 = NsAdj[[2]],
+                               varcov = varcov, as.numeric(include.grad))
+            Var.Log.Haz <- temp.V$VarLogHaz
+            Var.Log.Cum <- temp.V$VarLogCum
+            varcov <- varcov[order(c(which.ntd, which.td)), order(c(which.ntd,
+                                                                    which.td)), drop = FALSE]
+            if (include.grad == TRUE) {
+                Grad.LH <- matrix(temp.V$GradLogHaz, nb.time.pts,
+                                  nb.par)[, order(c(which.ntd, which.td)), drop = FALSE]
+                Grad.LC <- matrix(temp.V$GradLogCum, nb.time.pts,
+                                  nb.par)[, order(c(which.ntd, which.td)), drop = FALSE]
+                colnames(Grad.LH) <- colnames(varcov)
+                colnames(Grad.LC) <- colnames(varcov)
             }
-            else {
-                Grad.LH <- NA
-                Grad.LC <- NA
+            if (type.me == "marginal"){
+                varcov <- vcov
+                temp.VM <- DeltaMarg(temp.H$LogHaz,temp.H$HazCum,Grad.LH,Grad.LC,exp(2*coef[n.par]),vcov)
+                Var.Log.Haz <- temp.VM$VarLogHaz
+                Var.Log.Cum <- temp.VM$VarLogCum
+                if (include.gradient == TRUE){
+                    Grad.LH <- temp.VM$GradLogHaz
+                    Grad.LC <- temp.VM$GradLogCum
+                    colnames(Grad.LH) <- colnames(vcov)
+                    colnames(Grad.LC) <- colnames(vcov)
+                }
+                else {
+                    Grad.LH <- NA
+                    Grad.LC <- NA
+                }
             }
         }
         alpha <- (1 - level)/2
@@ -518,12 +591,19 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
                 paramf = p.ntd, deg = degree, n = gln, lw = lglw,
                 matk = MatK, totk = vec.knots, intk = int.knots,
                 nsadj1 = NsAdj[[1]], nsadj2 = NsAdj[[2]])
-            LogHaz <- temp.H$LogHaz
-            HazCum <- temp.H$HazCum
-            if (marginal == TRUE){
-                temp.M <- HazardMarg(LogHaz,HazCum,exp(2*Coef[i,n.par]))
+            if (type.me == "marginal"){
+                temp.M <- HazardMarg(temp.H$LogHaz,temp.H$HazCum,exp(2*Coef[i,n.par]))
                 LogHaz <- temp.M$LogHaz
                 HazCum <- temp.M$HazCum
+            }
+            else if (type.me == "conditional"){
+                rdm.val <- qnorm(quant.rdm,mean=0,sd=exp(coef[n.par]))
+                LogHaz <- temp.H$LogHaz + rdm.val
+                HazCum <- temp.H$HazCum*exp(rdm.val)
+            }
+            else {
+                LogHaz <- temp.H$LogHaz
+                HazCum <- temp.H$HazCum
             }
             lRes1[, i] <- LogHaz
             lRes2[, i] <- log(HazCum)
@@ -554,6 +634,9 @@ predict.mexhaz <- function (object, time.pts, data.val = data.frame(.NotUsed = N
     }
     else {
         res1 <- data.frame(hazard = lambda, surv = Surv)
+    }
+    if (!is.null(res0)){
+        res1 <- cbind(res0,res1)
     }
     res.PS <- list(call = call, results = cbind(time.pts, Test,
         res1), variances = variances, grad.loghaz = Grad.LH,

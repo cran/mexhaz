@@ -1,5 +1,3 @@
-vcov <- function(object, ...) UseMethod("vcov")
-
 vcov.mexhaz <- function(object, ...){
 
     if (is.na(object$random)){

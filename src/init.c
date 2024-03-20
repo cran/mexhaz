@@ -40,6 +40,7 @@ extern SEXP HGHAggr_NsL(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, 
 extern SEXP HGHAggr_NsLx(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixobs, SEXP statobs, SEXP lambdaobs, SEXP nbyclust, SEXP param, SEXP paramf, SEXP deg, SEXP n, SEXP lw, SEXP matk, SEXP totk, SEXP intk, SEXP nsadj1, SEXP nsadj2);
 extern SEXP HGHAggr_NsR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP statobs, SEXP nbyclust, SEXP param, SEXP paramf, SEXP deg, SEXP n, SEXP lw, SEXP matk, SEXP totk, SEXP intk, SEXP nsadj1, SEXP nsadj2);
 extern SEXP HGHAggr_NsRx(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP statobs, SEXP lambdaobs, SEXP nbyclust, SEXP param, SEXP paramf, SEXP deg, SEXP n, SEXP lw, SEXP matk, SEXP totk, SEXP intk, SEXP nsadj1, SEXP nsadj2);
+extern SEXP HGHAggr_Pois(SEXP fixobs, SEXP statobs, SEXP offobs, SEXP nbyclust, SEXP paramf);
 extern SEXP HGHAggr_PwL(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixobs, SEXP statobs, SEXP nbyclust, SEXP param, SEXP paramf, SEXP matk);
 extern SEXP HGHAggr_PwLx(SEXP x0, SEXP x, SEXP nph, SEXP timecat0, SEXP timecat, SEXP fixobs, SEXP statobs, SEXP lambdaobs, SEXP nbyclust, SEXP param, SEXP paramf, SEXP matk);
 extern SEXP HGHAggr_PwR(SEXP x, SEXP nph, SEXP timecat, SEXP fixobs, SEXP statobs, SEXP nbyclust, SEXP param, SEXP paramf, SEXP matk);
@@ -90,6 +91,7 @@ const static R_CallMethodDef R_CallDef[] = {
     {"HGHAggr_NsLx", (DL_FUNC) &HGHAggr_NsLx, 19},
     {"HGHAggr_NsR",  (DL_FUNC) &HGHAggr_NsR,  16},
     {"HGHAggr_NsRx", (DL_FUNC) &HGHAggr_NsRx, 17},
+    {"HGHAggr_Pois", (DL_FUNC) &HGHAggr_Pois,  5},    
     {"HGHAggr_PwL",  (DL_FUNC) &HGHAggr_PwL,  11},
     {"HGHAggr_PwLx", (DL_FUNC) &HGHAggr_PwLx, 12},
     {"HGHAggr_PwR",  (DL_FUNC) &HGHAggr_PwR,   9},

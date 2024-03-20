@@ -1,10 +1,15 @@
-riskfunc <- function(object,time.pts,data,data.0,clust.name=NULL,marginal=TRUE,type=c("hr","rr"),conf.int=c("delta","simul"),level=0.95,nb.sim=10000,seed=NULL){
+riskfunc <- function(object,time.pts,data,data.0,marginal=TRUE,quant.rdm=0.5,cluster=NULL,quant.rdm.0=0.5,cluster.0=NULL,type=c("hr","rr"),conf.int=c("delta","simul"),level=0.95,nb.sim=10000,seed=NULL,dataset=NULL){
+    if (is.na(object$random)){
+        marginal <- FALSE
+    }
     if (is.null(seed)){
         seed <- .Random.seed[1]
     }
     if (is.null(time.pts)){
         time.pts <- object$max.time/2
     }
+    conf.int <- match.arg(conf.int)
+    type <- match.arg(type)
 
     dim.data <- dim(data)[1]
     if (dim(data.0)[1]!=dim.data){
@@ -30,16 +35,14 @@ riskfunc <- function(object,time.pts,data,data.0,clust.name=NULL,marginal=TRUE,t
         stop("Predictions can be made for n individuals at 1 time point or for 1 individual at m time points but not for several individuals at several time points...")
     }
     multiobs <- (dim.data>1)
-    cluster.0 <- cluster.1 <- NULL
-    if (!is.null(clust.name)){
-        if (!is.character(clust.name[1]) & length(clust.name)!=1){
-            stop("The 'clust.name' argument must be a character string giving the name of the clustering variable in the dataset 'data'/'data.0'...")
+    if (!is.null(cluster) & marginal==FALSE){
+        if (is.null(cluster.0)){
+            cluster.0 <- cluster
         }
-        if (!clust.name%in%names(data)){
-            stop("The 'clust.name' argument must be a character string giving the name of the clustering variable in the dataset 'data'/'data.0'...")
+        if (conf.int == "simul"){
+            warning("For cluster-specific posterior predictions, only delta method-based confidence intervals are currently available...")
+            conf.int <- "delta"
         }
-        cluster.1 <- data[,clust.name]
-        cluster.0 <- data.0[,clust.name]
     }
     if (!is.numeric(level) | (level>1 | level<0)){
         level <- 0.95
@@ -50,9 +53,9 @@ riskfunc <- function(object,time.pts,data,data.0,clust.name=NULL,marginal=TRUE,t
     keep.sim <- (conf.int=="simul")
 
     set.seed(seed)
-    p0 <- predict.mexhaz(object,time.pts=time.pts,data.val=data.0,cluster=cluster.0,marginal=marginal,conf.int=conf.int,include.gradient=TRUE,nb.sim=nb.sim,keep.sim=keep.sim)
+    p0 <- predict.mexhaz(object,time.pts=time.pts,data.val=data.0,cluster=cluster.0,marginal=marginal,quant.rdm=quant.rdm.0,conf.int=conf.int,include.gradient=TRUE,nb.sim=nb.sim,keep.sim=keep.sim,dataset=dataset)
     set.seed(seed)
-    p1 <- predict.mexhaz(object,time.pts=time.pts,data.val=data,cluster=cluster.1,marginal=marginal,conf.int=conf.int,include.gradient=TRUE,nb.sim=nb.sim,keep.sim=keep.sim)
+    p1 <- predict.mexhaz(object,time.pts=time.pts,data.val=data,cluster=cluster,marginal=marginal,quant.rdm=quant.rdm,conf.int=conf.int,include.gradient=TRUE,nb.sim=nb.sim,keep.sim=keep.sim,dataset=dataset)
     time.pts <- p0$results$time.pts
     quant <- t(c(0,qnorm(alpha),qnorm(1-alpha)))
 

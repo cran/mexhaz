@@ -1,5 +1,8 @@
-adjsurv <- function(object,time.pts,data,data.0=NULL,weights=NULL,clust.name=NULL,marginal=TRUE,level=0.95){
+adjsurv <- function(object,time.pts,data,data.0=NULL,weights=NULL,marginal=TRUE,quant.rdm=0.5,cluster=NULL,quant.rdm.0=0.5,cluster.0=NULL,level=0.95,dataset=NULL){
 
+    if (is.na(object$random)){
+        marginal <- FALSE
+    }
     Idx.T.NA <- which(is.na(time.pts) | time.pts<0)
     if (length(Idx.T.NA)>0){
         stop("The 'time.pts' argument contains NA or negative values...")
@@ -14,19 +17,6 @@ adjsurv <- function(object,time.pts,data,data.0=NULL,weights=NULL,clust.name=NUL
     nb.time.pts <- length(time.pts)
     if (nb.time.pts==0){
         stop("The 'time.pts' argument contains no values for which predictions can be made...")
-    }
-    cluster.0 <- cluster.1 <- NULL
-    if (!is.null(clust.name)){
-        if (!is.character(clust.name[1]) & length(clust.name)!=1){
-            stop("The 'clust.name' argument must be a character string giving the name of the clustering variable in the dataset 'data'/'data.0'...")
-        }
-        if (!clust.name%in%names(data)){
-            stop("The 'clust.name' argument must be a character string giving the name of the clustering variable in the dataset 'data'/'data.0'...")
-        }
-        cluster.1 <- data[,clust.name]
-        if (!is.null(data.0)){
-            cluster.0 <- data.0[,clust.name]
-        }
     }
     if (!is.numeric(level) | (level>1 | level<0)){
         level <- 0.95
@@ -45,6 +35,9 @@ adjsurv <- function(object,time.pts,data,data.0=NULL,weights=NULL,clust.name=NUL
         if (dim(data.0)[1]!=NbObs){
             stop("'data.0' must contain the same number of observations as 'data'...")
         }
+        if (is.null(cluster.0)){
+            cluster.0 <- cluster
+        }
     }
 
     SurvPop <- VarSurv <- rep(0,nb.time.pts)
@@ -53,13 +46,13 @@ adjsurv <- function(object,time.pts,data,data.0=NULL,weights=NULL,clust.name=NUL
     }
 
     for (i in 1:nb.time.pts){
-        PredI <- predict.mexhaz(object,time.pts[i],data.val=data,cluster=cluster.1,marginal=marginal,include.gradient=TRUE)
+        PredI <- predict.mexhaz(object,time.pts[i],data.val=data,cluster=cluster,marginal=marginal,quant.rdm=quant.rdm,include.gradient=TRUE,dataset=dataset)
         surv <- PredI$results$surv
         SurvPop[i] <- weights%*%surv
         wgt.grad.surv <- -t(PredI$grad.logcum*surv*log(surv))%*%weights
         VarSurv[i] <- t(wgt.grad.surv)%*%PredI$vcov%*%wgt.grad.surv
         if (!is.null(data.0)){
-            PredI0 <- predict.mexhaz(object,time.pts[i],data.val=data.0,cluster=cluster.0,marginal=marginal,include.gradient=TRUE)
+            PredI0 <- predict.mexhaz(object,time.pts[i],data.val=data.0,cluster=cluster.0,marginal=marginal,quant.rdm=quant.rdm.0,include.gradient=TRUE,dataset=dataset)
             surv0 <- PredI0$results$surv
             SurvPop0[i] <- weights%*%surv0
             wgt.grad.surv0 <- -t(PredI0$grad.logcum*surv0*log(surv0))%*%weights

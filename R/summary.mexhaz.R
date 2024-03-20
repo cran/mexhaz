@@ -18,7 +18,9 @@ summary.mexhaz <- function(object, ...){
               n.time.0=object$n.time.0,
               n.par=object$n.par,
               loglik=object$loglik,
-              idx.ph=IdxPH)
+              names.ph=object$names.ph,
+              idx.ph=IdxPH,
+              baseline=object$base)
     class(x) <- "summary.mexhaz"
     x
 }

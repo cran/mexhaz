@@ -12,17 +12,19 @@ simulation (based on the assumption of multivariate normality of the
 model parameter estimates). This function allows the computation of the
 hazard and the survival at one time point for several vectors of
 covariates or for one vector of covariates at several time
-points. When the model includes a random effect, two types of
+points. When the model includes a random effect, three types of
 predictions can be made: (i) marginal predictions (obtained by
-integration over the random effect distribution) or (ii) conditional
-predictions either for a particular cluster (using the corresponding
-shrinkage estimate) or for the value 0 of the random effect.}
+integration over the random effect distribution), (ii) cluster-specific
+posterior predictions for an existing cluster, or (iii) conditional
+predictions for a given quantile of the random effect distribution (by
+default, for the median value, that is, 0).}
 
 \usage{
 \method{predict}{mexhaz}(object, time.pts, data.val = data.frame(.NotUsed = NA),
-cluster = NULL, marginal = FALSE, conf.int = c("delta", "simul", "none"),
+marginal = FALSE, quant.rdm = 0.5, cluster = NULL, conf.int = c("delta", "simul", "none"),
 level = 0.95, delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
-"log", "plain"), nb.sim = 10000, keep.sim = FALSE, include.gradient = FALSE, ...)
+"log", "plain"), nb.sim = 10000, keep.sim = FALSE, include.gradient =
+FALSE, dataset = NULL, ...)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -35,20 +37,6 @@ level = 0.95, delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
     are discarded.}
   \item{data.val}{a \code{data.frame} containing the values of the
     covariates at which predictions should be calculated.}
-  \item{cluster}{a vector of size either one or the number of
-    observations in \code{data.val} corresponding to the cluster(s) for
-    which conditional predictions should be calculated. In the first
-    case, conditional predictions for all observations are obtained for
-    the same cluster, while in the second case, conditional predictions
-    can be made for a different cluster for each observation in
-    \code{data.val}. Standard errors of prediction are obtained with the
-    approximation of the conditional mean squared error of prediction
-    (without the second-order bias correction term) described in Booth
-    and Hobert. This argument is not used if the model is a fixed effect
-    model. The default value is \code{NULL}: this corresponds to
-    marginal predictions (if \code{marginal} is set to \code{TRUE}, the preferred
-    option), or to conditional predictions for the value 0 of the random
-    effect (if \code{marginal} is set to \code{FALSE}).}
   \item{marginal}{logical value controlling the type of predictions
     returned by the function when the model includes a random
     intercept. When \code{TRUE}, marginal predictions are computed. The
@@ -56,8 +44,28 @@ level = 0.95, delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
     distribution of the random effect. The marginal hazard rate is
     obtained as the opposite of the marginal time
     derivative of the survival divided by the marginal survival. When
-    \code{FALSE} (default value), conditional predictions depending on the
-    value of the \code{cluster} argument are calculated.}
+    \code{FALSE} (default value), cluster-specific posterior predictions
+    or conditional predictions are calculated depending on the
+    value of the \code{cluster} argument.}
+  \item{quant.rdm}{numerical value (between 0 and 1) specifying the
+    quantile of the random effect distribution that should be used when
+    requesting conditional predictions. The default value is set to 0.5
+    (corresponding to the median, that is a value of the random effect
+    of 0). This argument is ignored if the model is a fixed effect
+    model, when the \code{marginal} argument is set to \code{TRUE}, or
+    the \code{cluster} argument is not \code{NULL}.}
+  \item{cluster}{a single value corresponding to the name of the cluster for
+    which posterior predictions should be calculated. These predictions
+    are obtained by integrating over the cluster-specific posterior
+    distribution of the random effect and thus require the original
+    dataset. The dataset can either be provided as part of the
+    \code{mexhaz} object given as argument or by specifying the name of
+    the dataset in the \code{dataset} argument (see below). The \code{cluster} argument is not used if the model is a fixed effect
+    model. The default value is \code{NULL}: this corresponds to
+    marginal predictions (if \code{marginal} is set to \code{TRUE}, the preferred
+    option), or to conditional predictions for a given quantile (by
+    default, the median) of the distribution of the random
+    effect (if \code{marginal} is set to \code{FALSE}).}
   \item{conf.int}{method to be used to compute confidence
     limits. Selection can be made between the following options:
     \code{"delta"} for the Delta Method (default value);
@@ -80,11 +88,6 @@ level = 0.95, delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
       set to \code{"log"}, they are based on a Wald-type CI for the
       cumulative hazard; otherwise they are based directly on a
       Wald-type CI for the survival.}
-  \item{include.gradient}{logical value allowing the function to return
-  the components of the gradient of the logarithm of the hazard and of
-  the logarithm of the cumulative hazard for each prediction. This
-  argument is used only if \code{conf.int} is set to \code{"delta"}. The
-  default value is \code{FALSE}.}
   \item{nb.sim}{integer value representing the number of simulations
   used to estimate the confidence limits for the (excess) hazard
   and the (net) survival. This argument is used only if
@@ -95,6 +98,16 @@ level = 0.95, delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
     \code{riskfunc} function to compute simulation-based confidence
     intervals for hazard ratios / risk ratios. The default value is set
     to \code{FALSE}.}
+  \item{include.gradient}{logical value allowing the function to return
+  the components of the gradient of the logarithm of the hazard and of
+  the logarithm of the cumulative hazard for each prediction. This
+  argument is used only if \code{conf.int} is set to \code{"delta"}. The
+  default value is \code{FALSE}.}
+  \item{dataset}{original dataset used to fit the \code{mexhaz} object
+    given as argument to the function. This argument is only necessary
+    if cluster-specific posterior predictions are requested (and if the
+    dataset is not already provided in the \code{mexhaz} object). The
+    default value is set to \code{NULL}.}
 \item{\dots}{for potential additional parameters.}
 }
 %\details{
@@ -108,7 +121,9 @@ level = 0.95, delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
 \item{results}{a \code{data.frame} consisting of: the time
   points at which the (excess) hazard and the (net) survival have been
   calculated; the values of the covariates used to estimate the
-  (excess) hazard and the (net) survival; the
+  (excess) hazard and the (net) survival; the name of the cluster (when
+  cluster-specific posterior predictions are requested), or the quantile
+  and its value (when conditional predictions are requested); the
   (excess) hazard values with their confidence limits; and the (net) survival values with their confidence limits.}
 \item{variances}{a \code{data.frame} consisting of two columns: the
   variance of the logarithm of the (excess) hazard and the variance of
@@ -136,8 +151,10 @@ level = 0.95, delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
   at one time point for several vectors of covariates). It is
   used by \code{plot.predMexhaz} and \code{points.predMexhaz}.}
 \item{type.me}{the type of predictions produced in case of a model
-  including a random intercept. Can take the values \code{conditional}
-  or \code{marginal}.}
+  including a random intercept. Can take the values \code{marginal}
+  (marginal predictions), \code{posterior} (cluster-specific posterior
+  predictions), or \code{conditional} (conditional prediction for a
+  given quantile of the distribution of the random intercept).}
 \item{ci.method}{the method used to compute confidence limits.}
 \item{level}{level of confidence used to compute confidence limits.}
 \item{delta.type}{type of confidence limits for the hazard and the
@@ -155,10 +172,10 @@ level = 0.95, delta.type.h = c("log", "plain"), delta.type.s = c("log-log",
   Rachet B, Launoy G, Belot A; CENSUR Working Survival Group. A
   multilevel excess hazard model to estimate net survival on
   hierarchical data allowing for non-linear and non-proportional effects
-  of covariates. Stat Med 2016;35:3066-3084 (doi: 10.1002/sim.6881)
+  of covariates. Stat Med 2016;35:3066-3084 (doi: 10.1002/sim.6881).
 
-  Booth JG, Hobert JP. Standard errors of prediction in generalized
-  linear mixed models. J Am Stat Assoc 1998;93:262-272 (doi: 10.2307/2669622).
+  Skrondal A, Rabe-Hesketh S. Prediction in multilevel generalized
+  linear models. J R Stat Soc A Stat Soc 2009;172(3):659-687 (doi: 10.1111/j.1467-985X.2009.00587.x).
 }
 \author{
 Hadrien Charvat, Aurelien Belot
@@ -202,7 +219,7 @@ Pred_Modbs1_2C <- predict(Mod_bs1_2, time.pts=10,
 data.val=simdatn1)
 
 
-# Example of cluster-specific prediction (not run)
+# Example of cluster-specific posterior prediction (not run)
 
 ## Fit of a mixed-effect excess hazard model, with the baseline hazard
 ## described by a cubic B-spline with two knots at 1 and 5 year
@@ -211,8 +228,8 @@ data.val=simdatn1)
 # event=vstat)~agecr+IsexH, data=simdatn1, base="exp.bs", degree=3,
 # knots=c(1,5), expected="popmrate", random="clust", verbose=1000)
 
-## Prediction at several time points for an individual in cluster 15
-## with a specific vector of covariates
+## Posterior predictions at several time points for an individual
+## in cluster 15 with a specific vector of covariates
 # Pred_Modbs3_2A <- predict(Mod_bs3_2mix,
 # time.pts=seq(0.1,10,by=0.1), data.val=data.frame(agecr=0.2, IsexH=1),
 # cluster=15)

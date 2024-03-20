@@ -1,3 +1,15 @@
+Changes in version 2.5
+
+  o Corrected the behaviour of the mexhaz function when the random variable is a factor with missing levels (used droplevels()).
+
+  o Modified the predict.mexhaz function to include (i) the correct calculation of cluster-specific posterior predictions and (ii) conditional predictions for a specific quantile of the distribution of the random effect. For (i), this led to the addition of an argument 'dataset' to the predict.mexhaz function and of an argument 'keep.data' to the mexhaz function (cluster-specific posterior predictions require access to the dataset used to fit the model); for (ii), this led to the addition of an argument 'quant.rdm' to the predict.mexhaz function.
+  
+  o Modified the adjsurv and riskfunc functions accordingly: addition of arguments 'dataset', 'quant.rdm', 'quant.rdm.0', 'cluster', and 'cluster.0'; suppression of argument 'clust.name').
+
+  o Slightly modified the behaviour of the summary.mexhaz and print.summary.mexhaz functions.
+
+  o Corrected the behaviour of the vcov.mexhaz function so that it does not mask the original vcov function.
+
 Changes in version 2.4
 
   o Added missing protoptypes to some C function definitions.
