@@ -1,3 +1,9 @@
+Changes in version 2.6
+
+  o Modified the mexhaz and predict.mexhaz functions so that they can be used to model/predict the marginal rate when the dataset corresponds to recurrent events expressed in calendar time.
+
+  o Added some background functions to provide an interface with the xhaz package.
+
 Changes in version 2.5
 
   o Corrected the behaviour of the mexhaz function when the random variable is a factor with missing levels (used droplevels()).

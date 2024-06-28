@@ -232,7 +232,7 @@ data.val=simdatn1)
 ## in cluster 15 with a specific vector of covariates
 # Pred_Modbs3_2A <- predict(Mod_bs3_2mix,
 # time.pts=seq(0.1,10,by=0.1), data.val=data.frame(agecr=0.2, IsexH=1),
-# cluster=15)
+# cluster=15, dataset=simdatn1)
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

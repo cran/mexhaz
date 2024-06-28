@@ -1,4 +1,4 @@
-mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,verbose=0,iterlim=10000,print.level=1,gradtol=1e-8,testInit=TRUE,mode="fit",keep.data=FALSE,name.data=NULL,...){
+mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,recurrent=FALSE,verbose=0,iterlim=10000,print.level=1,gradtol=1e-8,testInit=TRUE,mode="fit",keep.data=FALSE,name.data=NULL,...){
 
     time0 <- as.numeric(proc.time()[3])
     FALCenv <- environment()
@@ -268,15 +268,29 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
                 }
             }
         }
-        HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,statobs,lambdaobs,nbyclust,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
-            temp <- HazGradHess(x0,x,t(nph),timecat0,timecat,t(fixobs),statobs,lambdaobs,nbyclust,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2)
-            nclust <- length(nbyclust)
-            lp <- length(paramf)+length(param)
-            Result <- list(LogHaz=temp$LogHaz, HazCum0=temp$HazCum0, HazCum=temp$HazCum, Grad.loglambda=matrix(temp$GradLogHaz,nclust,lp),
-                           Grad.Lambda=matrix(temp$GradCum,nclust,lp), Grad.Lambda0=matrix(temp$GradCum0,nclust,lp),
-                           Hess.loglambda=matrix(temp$HessLHaz,nclust,0.5*lp*(lp+1)), Hess.Lambda=matrix(temp$HessCum,nclust,0.5*lp*(lp+1)),
-                           Hess.Lambda0=matrix(temp$HessCum0,nclust,0.5*lp*(lp+1)), Test=temp$Test)
-            return(Result)
+        if (recurrent | is.null(random)){
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,statobs,lambdaobs,nbyclust,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                temp <- HazGradHess(x0,x,t(nph),timecat0,timecat,t(fixobs),statobs,lambdaobs,nbyclust,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2)
+                nclust <- length(nbyclust)
+                lp <- length(paramf)+length(param)
+                Result <- list(LogHaz = temp$LogHaz, HazCum = temp$HazCum-temp$HazCum0, Grad.loglambda = matrix(temp$GradLogHaz, nclust, lp),
+                               Grad.Lambda = matrix(temp$GradCum-temp$GradCum0, nclust, lp),
+                               Hess.loglambda = matrix(temp$HessLHaz, nclust, 0.5 * lp * (lp + 1)),
+                               Hess.Lambda = matrix(temp$HessCum-temp$HessCum0, nclust, 0.5 * lp * (lp + 1)), Test = temp$Test)
+                return(Result)
+            }
+        }
+        else {
+            HazardInt <- function(x0,x,nph,timecat0,timecat,fixobs,statobs,lambdaobs,nbyclust,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2){
+                temp <- HazGradHess(x0,x,t(nph),timecat0,timecat,t(fixobs),statobs,lambdaobs,nbyclust,param,paramf,deg,n,lw,matk,totk,intk,nsadj1,nsadj2)
+                nclust <- length(nbyclust)
+                lp <- length(paramf)+length(param)
+                Result <- list(LogHaz=temp$LogHaz, HazCum0=temp$HazCum0, HazCum=temp$HazCum, Grad.loglambda=matrix(temp$GradLogHaz,nclust,lp),
+                               Grad.Lambda=matrix(temp$GradCum,nclust,lp), Grad.Lambda0=matrix(temp$GradCum0,nclust,lp),
+                               Hess.loglambda=matrix(temp$HessLHaz,nclust,0.5*lp*(lp+1)), Hess.Lambda=matrix(temp$HessCum,nclust,0.5*lp*(lp+1)),
+                               Hess.Lambda0=matrix(temp$HessCum0,nclust,0.5*lp*(lp+1)), Test=temp$Test)
+                return(Result)
+            }
         }
     }
 
@@ -310,6 +324,7 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
             random.obs <- random.obs[-Idx.NA.Rdm]
             time.obs <- time.obs[-Idx.NA.Rdm,,drop=FALSE]
             status.obs <- status.obs[-Idx.NA.Rdm]
+            lambda.pop <- lambda.pop[-Idx.NA.Rdm]
             data.fix <- data.fix[-Idx.NA.Rdm,,drop=FALSE]
             data.nph <- data.nph[-Idx.NA.Rdm,,drop=FALSE]
         }
@@ -675,8 +690,9 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
 
                 ## Log-Likelihood
 
-                Hi <- temp.H$HazCum
                 lhi <- temp.H$LogHaz
+                Hi <- temp.H$HazCum
+
                 lwNu <- log(Hi)+lvar.w+var.w*nbcd
                 Nu <- lambertW0(exp(lwNu))
                 IdxNu <- which(Nu==Inf)
@@ -753,7 +769,7 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
                 LL.Temp <- apply(d2F.di2+d2lSn.di2[,ord2IdxM],2,sum)
                 hess <- Reorder(LL.Temp,Mat,IdxM)
 
-                if (Survtype=="counting"){
+                if (Survtype=="counting" & !recurrent){
 
                     ## Log-Likelihood
 
@@ -868,11 +884,6 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
                 d2lhi.db2 <- temp.H$Hess.loglambda
                 d2Hi.db2 <- temp.H$Hess.Lambda
 
-                if (Survtype=="counting"){
-                    Hi <- Hi - temp.H$HazCum0
-                    dHi.db <- dHi.db - temp.H$Grad.Lambda0
-                    d2Hi.db2 <- d2Hi.db2 - temp.H$Hess.Lambda0
-                }
                 if (mu.hat.LT==1){
                     res.LT <- list()
                     res.LT[[1]] <- Hi - lhi
@@ -1052,6 +1063,7 @@ mexhazEgh <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
          knots=knots,
          names.ph=names.fix,
          random=ifelse(!is.null(random),random,NA),
+         recurrent=recurrent,
          init=init,
          coefficients=param.fin,
          std.errors=sqrt(diag(vcov)),

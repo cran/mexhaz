@@ -1,4 +1,4 @@
-mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,fnoptim="nlm",verbose=0,method="Nelder-Mead",iterlim=10000,numHess=FALSE,print.level=1,gradtol=1e-6,mode="fit",keep.data=FALSE,name.data=NULL,...){
+mexhazAlphaStd <- function(formula,data,expected=NULL,expectedCum=NULL,base="weibull",degree=3,knots=NULL,bound=NULL,n.gleg=20,init=NULL,random=NULL,n.aghq=10,fnoptim="nlm",verbose=0,method="Nelder-Mead",iterlim=10000,numHess=FALSE,print.level=1,withAlpha=FALSE,gradtol=1e-6,mode="fit",keep.data=FALSE,name.data=NULL,...){
 
     time0 <- as.numeric(proc.time()[3])
     FALCenv <- environment()
@@ -253,11 +253,21 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
         if (min(lambda.pop,na.rm=TRUE)<0){
             stop("The expected hazard for some observations is negative!")
         }
-        withExp <- 1
+        withExp <- TRUE
+        ## Alpha ##
+        if (is.null(expectedCum)){
+            stop("If you provide an expected hazard rate, you also have to provide the corresponding cumulative expected hazard rate...")
+        }
+        Lambda.Pop <- data[,expectedCum]
+        if (min(Lambda.Pop,na.rm=TRUE)<0){
+            stop("The expected cumulative hazard for some observations is negative!")
+        }
+        ##
     }
     else {
         lambda.pop <- rep(0,n.obs.tot)
-        withExp <- 0
+        Lambda.Pop <- rep(0,n.obs.tot) ## Alpha ##
+        withExp <- FALSE
     }
 
     ## Remove observations containing missing values and perform several formatting operations on the data
@@ -270,6 +280,7 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
             time.obs <- time.obs[-Idx.NA.Rdm,,drop=FALSE]
             status.obs <- status.obs[-Idx.NA.Rdm]
             lambda.pop <- lambda.pop[-Idx.NA.Rdm]
+            Lambda.Pop <- Lambda.Pop[-Idx.NA.Rdm] ## Alpha ##
             data.fix <- data.fix[-Idx.NA.Rdm,,drop=FALSE]
             data.nph <- data.nph[-Idx.NA.Rdm,,drop=FALSE]
         }
@@ -284,11 +295,12 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
         time.obs <- time.obs[IdxRnd,,drop=FALSE]
         status.obs <- status.obs[IdxRnd]
         lambda.pop <- lambda.pop[IdxRnd]
+        Lambda.Pop <- Lambda.Pop[IdxRnd] ## Alpha ##
         data.fix <- data.fix[IdxRnd,,drop=FALSE]
         data.nph <- data.nph[IdxRnd,,drop=FALSE]
         listIdx <- sapply(levels(random.obs),function(x){which(random.obs==x)},simplify=FALSE)
     }
-    TotData <- cbind(time.obs,status.obs,lambda.pop,data.fix,data.nph)
+    TotData <- cbind(time.obs,status.obs,lambda.pop,Lambda.Pop,data.fix,data.nph) ## Alpha ##
     Xlevels <- .getXlevels(Xlevel.formula,TotData)
     Idx.Non.NA <- which(apply(TotData,1,function(vec){sum(is.na(vec))})==0)
     if (length(Idx.Non.NA)<n.obs.tot){
@@ -365,6 +377,7 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
         stop("Some variables in the 'nph()' sub-formula are not included in the formula...")
     }
     lambda.pop <- lambda.pop[Idx.Non.NA]
+    Lambda.Pop <- Lambda.Pop[Idx.Non.NA] ## Alpha ##
 
     ## Remove unnecessary objects
     rm(TotData,data.fix,data.nph)
@@ -529,10 +542,23 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
     fix.obs <- t(fix.obs) # Matrix of fixed effects has to be transposed for use by the Int/Delta functions
     nph.obs <- t(nph.obs) # Matrix of time-dependent effects has to be transposed for use by the Int/Delta functions
 
+    n.par <- n.td.base + n.ntd + n.td.nph
+    ## Alpha ##
+    ## Cst for adjusting the expected hazard
+    n.alpha <- 0
+    which.alpha <- NULL
+    if (withAlpha & withExp){
+        n.alpha <- 1
+        n.par <- n.par + 1
+        which.alpha <- n.par
+        param.init <- c(param.init,0)
+        param.names <- c(param.names,"log(Alpha)")
+    }
+    ##
+
     ## Creation of objects related to the random effect
     n.clust <- 1
     n.rand <- 0
-    n.par <- n.td.base + n.ntd + n.td.nph
     which.rdm <- NULL
     if (!is.null(random)){
         n.rand <- 1
@@ -578,7 +604,7 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
     ## Initial values
     if (!is.null(init)){
         if (length(init)!=n.par){
-            print(data.frame(Time.Dep.baseline=n.td.base,Non.TD.Effects=n.ntd,TD.Effects=n.td.nph,Random.Effect=n.rand))
+            print(data.frame(Time.Dep.baseline=n.td.base,Non.TD.Effects=n.ntd,TD.Effects=n.td.nph,Alpha=n.alpha,Random.Effect=n.rand)) ## Alpha ##
             stop("Wrong number of init parameters",call.=FALSE)
         }
     }
@@ -604,11 +630,22 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
         else {
             if (!is.null(random)){
                 MH0 <- 0
+                ## Alpha ##
+                lpd <- lambda.pop.delta
+                if (withExp & withAlpha){
+                    alpha <- exp(p.LT[which.alpha])
+                    lpd <- alpha*lambda.pop.delta
+                    B <- alpha*sum(Lambda.Pop)
+                }
+                else {
+                    B <- sum(Lambda.Pop)
+                }
+                ##
                 var.w <- exp(2*p.LT[which.rdm])
                 if (Survtype=="counting"){
                     MH0 <- -lambertW0(unlist(lapply(listIdx,function(x){sum(temp.H$HazCum0[x])*var.w})))
                 }
-                temp.LT <- Frailty.Adapt(nodes=x.H, nodessquare=x.H.2, logweights=log.rho.H, clust=n.by.clust, clustd=n.by.clust.delta, expect=lambda.pop.delta, betal=temp.H$LogHaz[status.one], betaL0=temp.H$HazCum0, betaL=temp.H$HazCum, A0=parent.cst.adj0, A=parent.cst.adj, var=var.w, mh0=MH0, muhatcond=mu.hat.LT)
+                temp.LT <- Frailty.Adapt(nodes=x.H, nodessquare=x.H.2, logweights=log.rho.H, clust=n.by.clust, clustd=n.by.clust.delta, expect=lpd, betal=temp.H$LogHaz[status.one], betaL0=temp.H$HazCum0, betaL=temp.H$HazCum, A0=parent.cst.adj0, A=parent.cst.adj, var=var.w, mh0=MH0, muhatcond=mu.hat.LT)
                 if (mu.hat.LT==1)
                     res.LT <- temp.LT$MuHat
                 else if (mu.hat.LT==2)
@@ -616,12 +653,12 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
                 else {
                     env$parent.cst.adj0 <- temp.LT$CstAdj0
                     env$parent.cst.adj <- temp.LT$CstAdj
-                    res.LT <- temp.LT$LogLik
+                    res.LT <- temp.LT$LogLik + B ## Alpha ##
                     res.LT[is.nan(res.LT) | abs(res.LT)==Inf] <- .Machine$double.xmax
                 }
             }
             else {
-                if (withExp==1){
+                if (withExp & !withAlpha){ ## Alpha ##
                     temp.l <- exp(temp.H$LogHaz)+lambda.pop
                     if (sum(temp.l-lambda.pop)==0){
                         res.LT <- .Machine$double.xmax
@@ -629,10 +666,20 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
                     else {
                         log.lambda <- log(temp.l)
                         log.lambda[log.lambda==Inf] <- .Machine$double.xmax
-                        res.LT <- sum(temp.H$HazCum - status.obs*log.lambda)
+                        res.LT <- sum(temp.H$HazCum + Lambda.Pop - status.obs*log.lambda) ## Alpha ##
                         res.LT <- min(res.LT,.Machine$double.xmax)
                     }
                 }
+                ## Alpha ##
+                else if (withExp & withAlpha){
+                    alpha <- exp(p.LT[which.alpha])
+                    temp.l <- exp(temp.H$LogHaz)+alpha*lambda.pop
+                    log.lambda <- log(temp.l)
+                    log.lambda[log.lambda==Inf] <- .Machine$double.xmax
+                    res.LT <- sum(temp.H$HazCum + alpha*Lambda.Pop - status.obs*log.lambda)
+                    res.LT <- min(res.LT,.Machine$double.xmax)
+                }
+                ##
                 else {
                     log.lambda <- temp.H$LogHaz
                     log.lambda[log.lambda==Inf] <- .Machine$double.xmax
@@ -742,7 +789,9 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
     res.FAR <- list(dataset=name.data,
          call=call,
          formula=formula,
+         withAlpha=withAlpha,
          expected=ifelse(!is.null(expected),expected,NA),
+         expectedCum=ifelse(!is.null(expectedCum),expectedCum,NA),
          xlevels=Xlevels,
          n.obs.tot=n.obs.tot,
          n.obs=n.obs,
@@ -756,7 +805,6 @@ mexhazStd <- function(formula,data,expected=NULL,base="weibull",degree=3,knots=N
          knots=knots,
          names.ph=names.fix,
          random=ifelse(!is.null(random),random,NA),
-         recurrent=FALSE,
          init=init,
          coefficients=param.fin,
          std.errors=sqrt(diag(vcov)),

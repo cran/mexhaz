@@ -30,7 +30,7 @@ is then maximised using an optimisation routine such as \code{nlm}
 mexhaz(formula, data, expected = NULL, base = c("weibull",
 "exp.bs", "exp.ns", "pw.cst"), degree = 3, knots = NULL,
 bound = NULL, n.gleg = 20, init = NULL, random = NULL,
-n.aghq = 10, fnoptim = c("nlm", "optim"), verbose = 0,
+n.aghq = 10, recurrent = FALSE, fnoptim = c("nlm", "optim"), verbose = 0,
 method = "Nelder-Mead", iterlim = 10000, numHess = FALSE,
 print.level = 1, exactGradHess = TRUE, gradtol =
 ifelse(exactGradHess, 1e-8, 1e-6), testInit = TRUE,
@@ -179,6 +179,10 @@ number of quadrature points used for estimating the
 cluster-specific marginal likelihoods by adaptive Gauss-Hermite
 quadrature. By default, \code{n.aghq=10}.
 }
+  \item{recurrent}{logical value indicating that the dataset
+  corresponds to recurrent events expressed in calendar time, in which
+  case the \code{mexhaz} function fits a model for the marginal rate. By default, \code{recurrent=FALSE}.
+}
   \item{fnoptim}{
 name of the R optimisation procedure used to maximise the
     likelihood. Selection can be made between \code{"nlm"} (by default)
@@ -293,6 +297,8 @@ represents additional parameters directly passed to \code{nlm} or
   \item{names.ph}{names of the covariables with a proportional effect.}
   \item{random}{name of the variable defining cluster membership (set to
     \code{NA} in the case of a purely fixed effects model).}
+  \item{recurrent}{logical value indicating whether the dataset
+  corresponds to recurrent events.}
   \item{init}{a vector containing the initial values of the parameters.}
   \item{coefficients}{a vector containing the parameter estimates.}
   \item{std.errors}{a vector containing the standard errors of the
